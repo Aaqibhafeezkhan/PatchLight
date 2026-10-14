@@ -41,6 +41,14 @@ public sealed class ProtectionSettingsTests : IDisposable
     }
 
     [Fact]
+    public void Letting_an_update_through_replaces_what_was_known_about_it()
+    {
+        var s = new ProtectionSettings().WithLetThrough("KB5127648", ["1"]).WithLetThrough("KB5127001", []);
+        s = s.WithLetThrough("KB5127648", ["1", "2"]);
+        Assert.Equal([new LetThrough("KB5127001", []), new LetThrough("KB5127648", ["1", "2"])], s.LetThrough);
+    }
+
+    [Fact]
     public void Odd_values_are_brought_back_in_range()
     {
         Assert.Equal(0, new ProtectionSettings(WaitDays: 5).WaitDays);

@@ -73,6 +73,9 @@ public sealed class RunAsAdministrator : IElevatedActions
     public Task ReleaseAsync(string kb, CancellationToken ct) =>
         Elevation.RunSelfElevatedAsync(ElevatedCommand.ReleaseArgs(kb), ct);
 
+    public Task<string?> SetProtectionAsync(ProtectionChoice choice, CancellationToken ct) =>
+        Elevation.RunSelfElevatedAsync(ElevatedCommand.SetProtectionArgs(choice), ct);
+
     public Task EnableDailyCheckAsync(CancellationToken ct) =>
         Elevation.RunSelfElevatedAsync(ElevatedCommand.EnableDailyCheckArgs, ct);
 

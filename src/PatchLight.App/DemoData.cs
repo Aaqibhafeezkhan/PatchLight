@@ -117,6 +117,16 @@ public static class DemoData
             return null;
         }
 
+        // The demo only remembers the choice; nothing is paused on its own and no policy is written.
+        public ProtectionSettings Protection { get; private set; } = new();
+
+        public Task<string?> SetProtectionAsync(ProtectionChoice choice, CancellationToken ct)
+        {
+            Protection = Protection with { AutoPauseRed = choice.AutoPauseRed, WaitDays = choice.WaitDays, PauseDays = choice.PauseDays };
+            if (choice.AutoPauseRed || choice.WaitDays > 0) dailyCheck = true;
+            return Task.FromResult<string?>(null);
+        }
+
         public Task EnableDailyCheckAsync(CancellationToken ct)
         {
             dailyCheck = true;

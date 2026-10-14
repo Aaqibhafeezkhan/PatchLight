@@ -142,6 +142,14 @@ public sealed class AppControllerTests : IDisposable
             LastUninstall = (kb, days);
             return Task.FromResult<string?>(null);
         }
+        public ProtectionChoice? LastProtection { get; private set; }
+
+        public Task<string?> SetProtectionAsync(ProtectionChoice choice, CancellationToken ct)
+        {
+            LastProtection = choice;
+            return Task.FromResult<string?>(null);
+        }
+
         public Task EnableDailyCheckAsync(CancellationToken ct) => Task.CompletedTask;
         public Task DisableDailyCheckAsync(CancellationToken ct) => Task.CompletedTask;
     }

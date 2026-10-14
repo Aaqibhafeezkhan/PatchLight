@@ -96,6 +96,12 @@ public static class Program
         {
             ErrorLog.Write(ex);
         }
+        // Windows' deferral policy stays only if PatchLight didn't write it.
+        Try(() =>
+        {
+            if (PatchLightHost.CreateProtectionStore().Load().OwnsDeferPolicy)
+                DeferPolicy.Apply(new WindowsUpdatePolicyValues(), 0, owns: true);
+        });
         Try(DailyTask.Unregister);
         Try(() => Autostart.ForCurrentUser().Disable());
         Try(() =>
@@ -124,7 +130,8 @@ public static class Program
         {
             DataFolder.Secure(SystemInfo.DataDirectory);
             actions = new ElevatedActions(PatchLightHost.CreateService(RequireWindows11()),
-                Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file."));
+                Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file."),
+                PatchLightHost.CreateProtectionStore(), new WindowsUpdatePolicyValues(), SystemInfo.IsHomeEdition());
         }
         catch (Exception ex)
         {

@@ -26,12 +26,19 @@ public sealed record ProtectionSettings(
     public int PauseDays { get; init; } = Math.Clamp(PauseDays, 1, HoldPolicy.MaxDays);
     public IReadOnlyList<LetThrough> LetThrough { get; init; } = LetThrough ?? [];
 
+    // Remembers that the person let this update through with these problems, replacing what was known about it.
+    public ProtectionSettings WithLetThrough(string kb, IReadOnlyList<string> issueIds) =>
+        this with { LetThrough = [.. LetThrough.Where(l => l.Kb != kb), new LetThrough(kb, issueIds)] };
+
     public bool Equals(ProtectionSettings? other) =>
         other is not null && AutoPauseRed == other.AutoPauseRed && WaitDays == other.WaitDays && PauseDays == other.PauseDays
         && OwnsDeferPolicy == other.OwnsDeferPolicy && LetThrough.SequenceEqual(other.LetThrough);
 
     public override int GetHashCode() => HashCode.Combine(AutoPauseRed, WaitDays, PauseDays, OwnsDeferPolicy);
 }
+
+// What the person picks on the Settings page. PauseDays is their pause length, used for automatic pauses too.
+public sealed record ProtectionChoice(bool AutoPauseRed, int WaitDays, int PauseDays);
 
 public sealed class ProtectionStore(string path)
 {

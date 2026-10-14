@@ -50,9 +50,31 @@ public sealed class ElevatedCommandTests : IDisposable
         Assert.Equal("--disable-daily-check", ElevatedCommand.Parse(WithResult(ElevatedCommand.DisableDailyCheckArgs))!.Verb);
     }
 
+    [Fact]
+    public void Parses_protection_settings()
+    {
+        var choice = new ProtectionChoice(true, 7, 21);
+        var command = ElevatedCommand.Parse(WithResult(ElevatedCommand.SetProtectionArgs(choice)))!;
+        Assert.Equal("--set-protection", command.Verb);
+        Assert.Equal(choice, command.Protection);
+    }
+
+    [Fact]
+    public async Task Protection_runs_the_protection_action()
+    {
+        var actions = new FakeActions();
+        var code = await ElevatedCommand.Parse(WithResult(ElevatedCommand.SetProtectionArgs(new ProtectionChoice(false, 3, 14))))!
+            .RunAsync(actions, CancellationToken.None);
+        Assert.Equal(0, code);
+        Assert.Equal(["protect False 3 14"], actions.Calls);
+    }
+
     [Theory]
     [InlineData]
     [InlineData("--tray")]
+    [InlineData("--set-protection", "--auto-pause", "maybe", "--wait-days", "7", "--result", "x.txt")]
+    [InlineData("--set-protection", "--auto-pause", "on", "--wait-days", "5", "--result", "x.txt")]
+    [InlineData("--set-protection", "--wait-days", "7", "--result", "x.txt")]
     [InlineData("--hold", "KB5127648")]
     [InlineData("--hold", "--result", "x.txt")]
     [InlineData("--release", "--result", "x.txt")]
@@ -142,6 +164,12 @@ public sealed class ElevatedCommandTests : IDisposable
         public async Task<string?> UninstallAsync(string kb, int days, CancellationToken ct)
         {
             await Record($"uninstall {kb} {days}");
+            return Warning;
+        }
+
+        public async Task<string?> SetProtectionAsync(ProtectionChoice choice, CancellationToken ct)
+        {
+            await Record($"protect {choice.AutoPauseRed} {choice.WaitDays} {choice.PauseDays}");
             return Warning;
         }
 
