@@ -164,10 +164,71 @@ public sealed class PatchLightService(
             issueIds = [];
         }
 
+        var now = time.GetUtcNow();
+        return await PlaceHoldAsync(update, now.AddDays(Math.Clamp(days, 1, HoldPolicy.MaxDays)), reason, issueIds, ct);
+    }
+
+    public const string AutoReason = "Paused automatically";
+    public const string WaitReason = "Waiting after release";
+
+    // Paused: the pauses this run started. LetThrough: the settings' list to keep, with pauses that just ran out added
+    // and updates Windows no longer offers dropped.
+    public sealed record ProtectionOutcome(IReadOnlyList<Hold> Paused, IReadOnlyList<LetThrough> LetThrough);
+
+    // What the background check does after a check: pause red updates (if turned on) and, when Windows' own
+    // deferral isn't available (Home), pause OS updates that are younger than the wait.
+    public async Task<ProtectionOutcome> ProtectAsync(CheckResult result, ProtectionSettings settings, bool waitWithHolds,
+        CancellationToken ct)
+    {
+        var letThrough = settings.LetThrough.ToList();
+        // A pause that ran out must not start again by itself, or a security update could stay paused forever.
+        foreach (var ended in result.Released.Where(r => r.Reason == ReleaseReason.Expired && r.Hold.Reason != WaitReason))
+        {
+            letThrough.RemoveAll(l => l.Kb == ended.Hold.Kb);
+            letThrough.Add(new LetThrough(ended.Hold.Kb, ended.Hold.IssueIds));
+        }
+        letThrough.RemoveAll(l => !result.Verdicts.Any(v => v.Update.PauseKey == l.Kb));
+
+        var justReleased = result.Released.Select(r => r.Hold.UpdateId).ToHashSet();
+        var paused = new List<Hold>();
+        var today = Today();
+        foreach (var verdict in result.Verdicts)
+        {
+            var update = verdict.Update;
+            if (update.PauseKey is not { } key) continue;
+            if (result.ActiveHolds.Any(h => h.Kb == key) || paused.Any(h => h.Kb == key)) continue;
+            // Hidden by something other than PatchLight: not ours to touch.
+            if (update.IsHidden && !justReleased.Contains(update.UpdateId)) continue;
+
+            if (settings.AutoPauseRed && verdict.Light == Light.Red)
+            {
+                var ids = verdict.Issues.Select(i => i.Id).ToList();
+                var allowed = letThrough.FirstOrDefault(l => l.Kb == key);
+                if (allowed is null || !ids.All(allowed.IssueIds.Contains))
+                {
+                    var now = time.GetUtcNow();
+                    paused.Add(await PlaceHoldAsync(update, now.AddDays(settings.PauseDays), AutoReason, ids, ct));
+                    continue;
+                }
+            }
+
+            if (waitWithHolds && settings.WaitDays > 0 && update.IsOsUpdate && !update.IsFeatureUpdate
+                && update.Released is { } released && today < released.AddDays(settings.WaitDays))
+            {
+                var until = new DateTimeOffset(released.AddDays(settings.WaitDays).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+                paused.Add(await PlaceHoldAsync(update, until, WaitReason, [], ct));
+            }
+        }
+        return new ProtectionOutcome(paused, letThrough);
+    }
+
+    private async Task<Hold> PlaceHoldAsync(PendingUpdate update, DateTimeOffset expires, string reason,
+        IReadOnlyList<string> issueIds, CancellationToken ct)
+    {
+        var kb = update.PauseKey!;
         await updates.SetHiddenAsync(update.UpdateId, true, ct);
 
-        var now = time.GetUtcNow();
-        var hold = new Hold(kb, update.UpdateId, now, now.AddDays(Math.Clamp(days, 1, HoldPolicy.MaxDays)), reason, issueIds);
+        var hold = new Hold(kb, update.UpdateId, time.GetUtcNow(), expires, reason, issueIds);
         try
         {
             holds.Save([.. holds.Load().Where(h => h.Kb != kb), hold]);
