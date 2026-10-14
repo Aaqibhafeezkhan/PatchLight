@@ -59,4 +59,13 @@ public sealed class AppStateStoreTests : IDisposable
         File.WriteAllText(FilePath, $$"""{ "PauseDays": {{saved}} }""");
         Assert.Equal(expected, new AppStateStore(FilePath).Load().PauseDays);
     }
+
+    [Fact]
+    public void Business_setting_round_trips_and_defaults_to_automatic()
+    {
+        var store = new AppStateStore(FilePath);
+        Assert.Null(store.Load().CountBusinessIssues);
+        store.Save(new AppState(CountBusinessIssues: true));
+        Assert.True(store.Load().CountBusinessIssues);
+    }
 }

@@ -79,6 +79,24 @@ public class UpdateCardTests
     }
 
     [Fact]
+    public void Card_lists_problems_set_aside_for_business_pcs()
+    {
+        var aside = Issue(IssueStatus.Confirmed, title: "Domain-joined devices might lose trust") with { LikelyBusinessOnly = true };
+        var verdict = Verdict(Light.Green) with { SetAside = [aside] };
+        Assert.Equal("Domain-joined devices might lose trust", Assert.Single(Assert.Single(UpdateCard.Build(Result([verdict]))).SetAside).Title);
+    }
+
+    [Fact]
+    public void Ended_pause_says_to_press_resume()
+    {
+        var hold = HoldFor("KB5127648");
+        var card = Assert.Single(UpdateCard.Build(Result([Verdict(Light.Red, hidden: true)],
+            released: [new ReleasedHold(hold, ReleaseReason.Expired)])));
+        Assert.Equal("Pause ended, press Resume", card.PausedText);
+        Assert.True(card.CanResume);
+    }
+
+    [Fact]
     public void Card_counts_the_problems_an_update_fixes()
     {
         var card = Assert.Single(UpdateCard.Build(Result([Verdict(Light.Green,

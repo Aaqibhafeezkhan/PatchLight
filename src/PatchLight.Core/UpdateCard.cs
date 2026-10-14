@@ -12,18 +12,21 @@ public sealed record UpdateCard(
     int FixCount,
     string? PausedText,
     bool CanPause,
-    bool CanResume)
+    bool CanResume,
+    IReadOnlyList<KnownIssue> SetAside)
 {
     public static IReadOnlyList<UpdateCard> Build(CheckResult result)
     {
         // An update that is ready to resume is still hidden until someone resumes it.
-        var holds = result.ActiveHolds.Concat(result.Released.Select(r => r.Hold)).ToList();
+        var holds = result.ActiveHolds.Select(h => (Hold: h, Ended: false))
+            .Concat(result.Released.Select(r => (r.Hold, Ended: r.Reason == ReleaseReason.Expired)))
+            .ToList();
         // Paused updates can't hurt the PC, so they go last.
         return result.Verdicts
             .OrderBy(v => v.Update.IsHidden)
             .ThenByDescending(v => v.Light)
             .ThenBy(v => v.Update.Title, StringComparer.CurrentCultureIgnoreCase)
-            .Select(v => From(v, holds.FirstOrDefault(h => h.UpdateId == v.Update.UpdateId)))
+            .Select(v => From(v, holds.FirstOrDefault(h => h.Hold.UpdateId == v.Update.UpdateId)))
             .ToList();
     }
 
@@ -34,12 +37,14 @@ public sealed record UpdateCard(
         _ => "Problems",
     };
 
-    private static UpdateCard From(UpdateVerdict verdict, Hold? hold)
+    private static UpdateCard From(UpdateVerdict verdict, (Hold Hold, bool Ended) match)
     {
         var update = verdict.Update;
+        var hold = match.Hold;
         var pausedText = !update.IsHidden ? null
-            : hold is not null ? $"Paused until {hold.ExpiresOn.ToLocalTime():MMM d}"
-            : "Hidden in Windows Update";
+            : hold is null ? "Hidden in Windows Update"
+            : match.Ended ? "Pause ended, press Resume"
+            : $"Paused until {hold.ExpiresOn.ToLocalTime():MMM d}";
         return new UpdateCard(
             update.UpdateId,
             update.Kb,
@@ -51,6 +56,7 @@ public sealed record UpdateCard(
             verdict.Fixes.Count,
             pausedText,
             CanPause: update.Kb is not null && !update.IsHidden && verdict.Light != Light.Green,
-            CanResume: update.IsHidden && hold is not null);
+            CanResume: update.IsHidden && hold is not null,
+            SetAside: verdict.SetAside);
     }
 }

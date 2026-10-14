@@ -28,7 +28,7 @@ public static class AlertPlanner
         {
             alerts.Add(new Alert($"Microsoft fixed {kb}", result.ReleaseApplied
                 ? "PatchLight resumed it. Windows Update will install it."
-                : "The daily check will resume it, or open PatchLight to resume it now."));
+                : "Open PatchLight and press Resume. If the daily check is on, it does this for you."));
         }
 
         // Remember only what is true now, so a problem that goes away and comes back alerts again.

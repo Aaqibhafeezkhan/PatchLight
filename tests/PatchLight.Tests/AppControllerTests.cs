@@ -127,8 +127,38 @@ public sealed class AppControllerTests : IDisposable
         }
 
         public Task ReleaseAsync(string kb, CancellationToken ct) => updates.SetHiddenAsync("id-" + kb, false, ct);
-        public Task<string?> UninstallAsync(string kb, int days, CancellationToken ct) => Task.FromResult<string?>(null);
+        public (string Kb, int Days)? LastUninstall { get; private set; }
+
+        public Task<string?> UninstallAsync(string kb, int days, CancellationToken ct)
+        {
+            LastUninstall = (kb, days);
+            return Task.FromResult<string?>(null);
+        }
         public Task EnableDailyCheckAsync(CancellationToken ct) => Task.CompletedTask;
         public Task DisableDailyCheckAsync(CancellationToken ct) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task Business_setting_changes_what_counts()
+    {
+        issues.Issues.Clear();
+        issues.Issues.Add(Issue(IssueStatus.Confirmed, kb: "KB5127648") with { LikelyBusinessOnly = true });
+
+        await controller.SetCountBusinessIssuesAsync(false);
+        Assert.Equal(Light.Green, controller.Light);
+        Assert.False(controller.CountBusinessIssues);
+
+        await controller.SetCountBusinessIssuesAsync(true);
+        Assert.Equal(Light.Red, controller.Light);
+        Assert.True(controller.CountBusinessIssues);
+    }
+
+    [Fact]
+    public async Task Uninstall_passes_the_pause_length()
+    {
+        await controller.CheckAsync();
+        var result = await controller.UninstallAsync("KB5124008");
+        Assert.True(result.Succeeded);
+        Assert.Equal(("KB5124008", 14), actions.LastUninstall);
     }
 }

@@ -10,6 +10,7 @@ public sealed record ActionResult(bool Succeeded, string? Message);
 public sealed class AppController(Func<Backend> createBackend, AppStateStore stateStore)
 {
     private Backend? backend;
+    private bool countBusinessByDefault;
     private bool checkAgain;
 
     public event Action? Changed;
@@ -84,6 +85,21 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
 
     public Task<ActionResult> PauseAsync(UpdateCard card) =>
         RunActionAsync(b => b.Actions.HoldAsync(card.Kb!, State.PauseDays, CancellationToken.None));
+
+    // Removing an update keeps it paused for the usual pause length once Windows offers it again.
+    public Task<ActionResult> UninstallAsync(string kb) =>
+        RunActionAsync(b => b.Actions.UninstallAsync(kb, State.PauseDays, CancellationToken.None));
+
+    // Whether problems that usually only hit business PCs color the light. Until the person
+    // chooses, the PC decides (work PCs count them).
+    public bool CountBusinessIssues => State.CountBusinessIssues ?? (TryBackend() is not null && countBusinessByDefault);
+
+    public async Task SetCountBusinessIssuesAsync(bool count)
+    {
+        SaveState(State with { CountBusinessIssues = count });
+        if (TryBackend() is { } b) b.Service.CountBusinessIssues = count;
+        await CheckAsync();
+    }
 
     public Task<ActionResult> ResumeAsync(UpdateCard card) =>
         RunActionAsync(async b =>
@@ -169,7 +185,14 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
         }
     }
 
-    private Backend Backend() => backend ??= createBackend();
+    private Backend Backend()
+    {
+        if (backend is not null) return backend;
+        var created = createBackend();
+        countBusinessByDefault = created.Service.CountBusinessIssues;
+        if (State.CountBusinessIssues is { } chosen) created.Service.CountBusinessIssues = chosen;
+        return backend = created;
+    }
 
     private Backend? TryBackend()
     {

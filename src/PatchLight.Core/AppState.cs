@@ -7,7 +7,8 @@ public sealed record AppState(
     int PauseDays = HoldPolicy.DefaultDays,
     IReadOnlyList<string>? NotifiedProblems = null,
     IReadOnlyList<string>? NotifiedFixed = null,
-    DateTimeOffset? SeenBackgroundRun = null)
+    DateTimeOffset? SeenBackgroundRun = null,
+    bool? CountBusinessIssues = null)
 {
     public int PauseDays { get; init; } = Math.Clamp(PauseDays, 1, HoldPolicy.MaxDays);
     public IReadOnlyList<string> NotifiedProblems { get; init; } = NotifiedProblems ?? [];
@@ -15,6 +16,7 @@ public sealed record AppState(
 
     public bool Equals(AppState? other) =>
         other is not null && PauseDays == other.PauseDays && SeenBackgroundRun == other.SeenBackgroundRun
+        && CountBusinessIssues == other.CountBusinessIssues
         && NotifiedProblems.SequenceEqual(other.NotifiedProblems) && NotifiedFixed.SequenceEqual(other.NotifiedFixed);
 
     public override int GetHashCode() => PauseDays;

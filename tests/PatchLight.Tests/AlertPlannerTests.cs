@@ -57,7 +57,7 @@ public class AlertPlannerTests
 
         var alert = Assert.Single(alerts);
         Assert.Equal("Microsoft fixed KB5127648", alert.Title);
-        Assert.Equal("The daily check will resume it, or open PatchLight to resume it now.", alert.Body);
+        Assert.Equal("Open PatchLight and press Resume. If the daily check is on, it does this for you.", alert.Body);
         Assert.Empty(AlertPlanner.Plan(next, result).Alerts);
     }
 
