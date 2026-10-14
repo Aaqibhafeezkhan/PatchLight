@@ -30,6 +30,10 @@ Microsoft's own list of known problems and gives it a light:
 - **Never blocks forever.** A daily automatic check resumes a paused update as soon as Microsoft fixes it, and every pause ends after 14 days (you can choose up to 35), because security updates matter.
 - **What broke my PC?** The History tab shows recent updates and marks the one most likely behind an open problem.
   One click on **Uninstall this update** removes it, and PatchLight keeps it paused until Microsoft fixes the problem.
+- **New Windows versions too.** When Windows offers an upgrade like "Windows 11, version 26H2", PatchLight checks it
+  against Microsoft's known issues for that version, so you know whether to wait.
+- **Early warnings from tech news.** Problems often show up on Neowin and Windows Latest days before Microsoft lists them.
+  A report turns a safe update into 🟡 Wait (never 🔴), with a link to the article. You can turn this off in Settings.
 - **Only problems that matter to you.** Some known problems only hit company PCs (domains, virtual desktops, servers).
   On a home PC they're still listed but don't turn the light red. Company and school PCs count everything.
 
@@ -70,7 +74,7 @@ patchlight uninstall KB5124008   Remove an installed update and keep it paused u
 - **Business-only problems:** recognized only by clear wording in Microsoft's description (domain-joined devices,
   Azure Virtual Desktop, Remote Desktop Services, Windows Server, IT-managed devices and similar). When in doubt, a problem counts.
 - **Daily check:** a scheduled task (`\PatchLight\Daily check` in Task Scheduler) runs `PatchLight.exe --background-check` as SYSTEM once a day. Its data folder, `C:\ProgramData\PatchLight`, can only be changed by administrators.
-- **Your settings:** `%LOCALAPPDATA%\PatchLight`.
+- **Your settings:** `%LOCALAPPDATA%\PatchLight` (also the saved news reports, kept 30 days).
 
 ### Uninstall
 
@@ -79,9 +83,13 @@ paused, removes the daily check and "Start with Windows", and deletes its data i
 
 ## Privacy
 
-PatchLight doesn't collect, send or share anything about you or your PC. It only does two things over the network:
-it downloads Microsoft's public Windows release health page for your Windows version, and it asks Windows Update on
-your own PC which updates are waiting. No account, no analytics, no server of ours.
+PatchLight doesn't collect, send or share anything about you or your PC. Over the network it only:
+- downloads Microsoft's public Windows release health pages (for your Windows version, and for any new version Windows offers you),
+- downloads the public news feeds of [Neowin](https://www.neowin.net/news/rss/) and [Windows Latest](https://www.windowslatest.com/feed/)
+  to spot reported problems (turn this off in Settings, or use `patchlight --no-news`),
+- asks Windows Update on your own PC which updates are waiting.
+
+No account, no analytics, no server of ours. These sites see an ordinary download from your PC, nothing more.
 This program will not transfer any information to other networked systems unless specifically requested by the user
 or the person installing or operating it.
 
