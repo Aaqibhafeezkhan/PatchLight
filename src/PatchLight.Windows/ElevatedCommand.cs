@@ -24,6 +24,7 @@ public sealed class ElevatedActions(PatchLightService service, string exePath) :
     public async Task<string?> HoldAsync(string kb, int days, CancellationToken ct)
     {
         var hold = await service.HoldAsync(kb, days, "Paused by you", ct);
+        WindowsUpdateScan.Start();
         return EnsureDailyCheck(hold, $"Paused {hold.Kb}");
     }
 
@@ -64,7 +65,11 @@ public sealed class ElevatedActions(PatchLightService service, string exePath) :
         }
     }
 
-    public Task ReleaseAsync(string kb, CancellationToken ct) => service.ReleaseAsync(kb, ct);
+    public async Task ReleaseAsync(string kb, CancellationToken ct)
+    {
+        await service.ReleaseAsync(kb, ct);
+        WindowsUpdateScan.Start();
+    }
 
     public Task EnableDailyCheckAsync(CancellationToken ct) => Task.Run(() => DailyTask.Register(exePath), ct);
 
