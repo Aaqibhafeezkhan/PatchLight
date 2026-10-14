@@ -22,6 +22,8 @@ public class DailyTaskTests
         Assert.Equal("PT30M", xml.Descendants(Ns + "ExecutionTimeLimit").Single().Value);
         Assert.Equal(@"C:\Apps\PatchLight\PatchLight.exe", xml.Descendants(Ns + "Command").Single().Value);
         Assert.Equal("--background-check", xml.Descendants(Ns + "Arguments").Single().Value);
+        // Also soon after start-up, so an update PatchLight removed is paused before Windows reinstalls it.
+        Assert.Equal("PT5M", xml.Descendants(Ns + "BootTrigger").Single().Element(Ns + "Delay")!.Value);
     }
 
     [Fact]

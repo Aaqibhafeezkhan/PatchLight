@@ -316,4 +316,14 @@ public sealed class PatchLightServiceTests : IDisposable
         Assert.Empty(_holds.Load());
         Assert.Empty(_updates.HideCalls);
     }
+
+    [Fact]
+    public async Task Finds_the_latest_install_of_an_update()
+    {
+        _updates.History.Add(new InstalledUpdate("KB5124008", "old", null, _time.GetUtcNow().AddDays(-40)));
+        _updates.History.Add(new InstalledUpdate("KB5124008", "new", null, _time.GetUtcNow().AddDays(-35)));
+
+        Assert.Equal("new", (await _service.GetInstalledAsync("5124008", CancellationToken.None)).Title);
+        await Assert.ThrowsAsync<PatchLightException>(() => _service.GetInstalledAsync("KB1111111", CancellationToken.None));
+    }
 }

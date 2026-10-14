@@ -94,4 +94,25 @@ public class RenderTests
         Assert.Contains("Domain-joined devices might lose trust", text);
         Assert.Contains("usually only affect business PCs", text);
     }
+
+    [Fact]
+    public void Removed_update_says_to_restart_and_that_it_stays_paused()
+    {
+        var hold = new Hold("KB5124008", "", Now, Now.AddDays(14), "Removed by you");
+        var text = Output(c => Render.Uninstalled(c, hold));
+        Assert.Contains("Removed KB5124008", text);
+        Assert.Contains("Restart your PC", text);
+        Assert.Contains("pause it", text);
+    }
+
+    [Fact]
+    public void Waiting_pause_is_shown_as_waiting()
+    {
+        var hold = new Hold("KB5124008", "", Now, Now.AddDays(14), "Removed by you");
+        var result = new CheckResult([], [hold], [], true, new IssueSnapshot([], Now, false), Now);
+        Assert.Contains("when Windows offers it again", Output(c => Render.Check(c, result, isAdmin: true)));
+    }
+
+    [Fact]
+    public void Help_lists_uninstall() => Assert.Contains("patchlight uninstall", Output(c => Render.Help(c)));
 }

@@ -127,6 +127,7 @@ public sealed class AppControllerTests : IDisposable
         }
 
         public Task ReleaseAsync(string kb, CancellationToken ct) => updates.SetHiddenAsync("id-" + kb, false, ct);
+        public Task<string?> UninstallAsync(string kb, int days, CancellationToken ct) => Task.FromResult<string?>(null);
         public Task EnableDailyCheckAsync(CancellationToken ct) => Task.CompletedTask;
         public Task DisableDailyCheckAsync(CancellationToken ct) => Task.CompletedTask;
     }

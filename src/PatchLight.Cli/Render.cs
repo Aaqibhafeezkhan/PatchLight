@@ -62,7 +62,12 @@ public static class Render
         }
 
         foreach (var hold in result.ActiveHolds)
-            console.MarkupLineInterpolated($"Paused: {hold.Kb} until {hold.ExpiresOn.ToLocalTime():MMM d}.");
+        {
+            if (hold.IsWaiting)
+                console.MarkupLineInterpolated($"Will pause {hold.Kb} when Windows offers it again (until {hold.ExpiresOn.ToLocalTime():MMM d}).");
+            else
+                console.MarkupLineInterpolated($"Paused: {hold.Kb} until {hold.ExpiresOn.ToLocalTime():MMM d}.");
+        }
 
         foreach (var released in result.Released)
         {
@@ -84,6 +89,10 @@ public static class Render
     public static void Held(IAnsiConsole console, Hold hold) =>
         console.MarkupLineInterpolated(
             $"[green]Paused {hold.Kb}[/] until {hold.ExpiresOn.ToLocalTime():MMM d}. Run patchlight as administrator to resume it once Microsoft fixes it; after {hold.ExpiresOn.ToLocalTime():MMM d} it resumes on the next run.");
+
+    public static void Uninstalled(IAnsiConsole console, Hold hold) =>
+        console.MarkupLineInterpolated(
+            $"[green]Removed {hold.Kb}.[/] Restart your PC to finish. When Windows offers it again, PatchLight will pause it until Microsoft fixes it (until {hold.ExpiresOn.ToLocalTime():MMM d} at the latest) the next time it runs as administrator.");
 
     public static void Released(IAnsiConsole console, ReleasedHold released) =>
         console.MarkupLineInterpolated($"[green]Resumed {released.Hold.Kb}[/]. Windows Update will install it.");
@@ -114,8 +123,9 @@ public static class Render
         console.MarkupLine($"  [bold]patchlight hold KB5127648[/]       Pause an update ({HoldPolicy.DefaultDays} days, --days N up to {HoldPolicy.MaxDays})");
         console.MarkupLine("  [bold]patchlight release KB5127648[/]    Resume a paused update");
         console.MarkupLine("  [bold]patchlight history[/]              Recent updates and which one likely broke something");
+        console.MarkupLine("  [bold]patchlight uninstall KB5124008[/]  Remove an installed update and keep it paused until it's fixed");
         console.WriteLine();
-        console.MarkupLine("[grey]Pausing and resuming need a terminal opened as administrator.[/]");
+        console.MarkupLine("[grey]Pausing, resuming and removing need a terminal opened as administrator.[/]");
     }
 
     private static string Why(ReleaseReason reason) => reason switch

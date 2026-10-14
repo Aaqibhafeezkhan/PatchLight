@@ -90,6 +90,14 @@ public static class DemoData
 
         public Task ReleaseAsync(string kb, CancellationToken ct) => service.ReleaseAsync(kb, ct);
 
+        // Nothing is really removed in the demo; it only records the pause that would follow.
+        public async Task<string?> UninstallAsync(string kb, int days, CancellationToken ct)
+        {
+            await service.PlanHoldAsync(kb, days, [], ct);
+            dailyCheck = true;
+            return null;
+        }
+
         public Task EnableDailyCheckAsync(CancellationToken ct)
         {
             dailyCheck = true;

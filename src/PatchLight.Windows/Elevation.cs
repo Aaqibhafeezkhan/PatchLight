@@ -67,6 +67,9 @@ public sealed class RunAsAdministrator : IElevatedActions
     public Task<string?> HoldAsync(string kb, int days, CancellationToken ct) =>
         Elevation.RunSelfElevatedAsync(ElevatedCommand.HoldArgs(kb, days), ct);
 
+    public Task<string?> UninstallAsync(string kb, int days, CancellationToken ct) =>
+        Elevation.RunSelfElevatedAsync(ElevatedCommand.UninstallArgs(kb, days), ct);
+
     public Task ReleaseAsync(string kb, CancellationToken ct) =>
         Elevation.RunSelfElevatedAsync(ElevatedCommand.ReleaseArgs(kb), ct);
 

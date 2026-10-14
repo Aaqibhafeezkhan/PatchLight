@@ -31,6 +31,10 @@ public static class DailyTask
                 <DaysInterval>1</DaysInterval>
               </ScheduleByDay>
             </CalendarTrigger>
+            <BootTrigger>
+              <Enabled>true</Enabled>
+              <Delay>PT5M</Delay>
+            </BootTrigger>
           </Triggers>
           <Principals>
             <Principal id="Author">

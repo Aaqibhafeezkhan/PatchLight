@@ -155,6 +155,13 @@ public sealed class PatchLightService(
         return new ReleasedHold(hold, ReleaseReason.Manual);
     }
 
+    public async Task<InstalledUpdate> GetInstalledAsync(string kbText, CancellationToken ct)
+    {
+        var kb = RequireKb(kbText);
+        return (await updates.GetHistoryAsync(500, ct)).Where(u => u.Kb == kb).MaxBy(u => u.InstalledOn)
+            ?? throw new PatchLightException($"{kb} isn't installed on this PC.");
+    }
+
     public async Task<IReadOnlyList<HistoryItem>> HistoryAsync(int days, CancellationToken ct)
     {
         var data = await issues.GetAsync(windowsVersion, ct);

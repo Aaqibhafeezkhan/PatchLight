@@ -26,6 +26,23 @@ public sealed class ElevatedCommandTests : IDisposable
     }
 
     [Fact]
+    public void Parses_uninstall_with_days()
+    {
+        var command = ElevatedCommand.Parse(WithResult(ElevatedCommand.UninstallArgs("KB5124008", 21)));
+        Assert.Equal(new ElevatedCommand("--uninstall-update", "KB5124008", 21, resultPath), command);
+    }
+
+    [Fact]
+    public async Task Uninstall_runs_the_uninstall_action()
+    {
+        var actions = new FakeActions();
+        var code = await ElevatedCommand.Parse(WithResult(ElevatedCommand.UninstallArgs("KB5124008", 14)))!
+            .RunAsync(actions, CancellationToken.None);
+        Assert.Equal(0, code);
+        Assert.Equal(["uninstall KB5124008 14"], actions.Calls);
+    }
+
+    [Fact]
     public void Parses_the_other_commands()
     {
         Assert.Equal("--release", ElevatedCommand.Parse(WithResult(ElevatedCommand.ReleaseArgs("KB5127648")))!.Verb);
@@ -121,6 +138,13 @@ public sealed class ElevatedCommandTests : IDisposable
         }
 
         public Task ReleaseAsync(string kb, CancellationToken ct) => Record($"release {kb}");
+
+        public async Task<string?> UninstallAsync(string kb, int days, CancellationToken ct)
+        {
+            await Record($"uninstall {kb} {days}");
+            return Warning;
+        }
+
         public Task EnableDailyCheckAsync(CancellationToken ct) => Record("enable");
         public Task DisableDailyCheckAsync(CancellationToken ct) => Record("disable");
     }

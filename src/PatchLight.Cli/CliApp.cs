@@ -56,6 +56,19 @@ public static class CliApp
                     Render.Released(console, released);
                     return 0;
 
+                case "uninstall":
+                    var kbToRemove = CliArgs.Required(args, 1, "uninstall KB5124008");
+                    var removeDays = CliArgs.Days(args, HoldPolicy.DefaultDays);
+                    RequireAdmin(isAdmin);
+                    var planned = await console.Status().StartAsync("Removing (this can take a few minutes)...", async _ =>
+                    {
+                        var installed = await service.GetInstalledAsync(kbToRemove, cts.Token);
+                        await Task.Run(() => UpdateRemover.Remove(installed), cts.Token);
+                        return await service.PlanHoldAsync(installed.Kb!, Math.Min(removeDays, HoldPolicy.MaxDays), [], cts.Token);
+                    });
+                    Render.Uninstalled(console, planned);
+                    return 0;
+
                 case "history":
                     var history = await console.Status().StartAsync("Reading update history...",
                         _ => service.HistoryAsync(CliArgs.Days(args, 60), cts.Token));
@@ -98,6 +111,6 @@ public static class CliApp
     {
         if (!isAdmin)
             throw new PatchLightException(
-                "Pausing and resuming need administrator rights. Open Terminal as administrator and run this again.");
+                "Pausing, resuming and removing updates need administrator rights. Open Terminal as administrator and run this again.");
     }
 }
