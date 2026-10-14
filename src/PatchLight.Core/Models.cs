@@ -54,6 +54,11 @@ public sealed record Hold(
 {
     public IReadOnlyList<string> IssueIds { get; init; } = IssueIds ?? [];
 
+    // A pause planned for an update Windows doesn't offer right now (PatchLight just removed it).
+    // It is applied the moment Windows offers that update again.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsWaiting => UpdateId.Length == 0;
+
     // Lists compare by reference by default; a hold read back from disk should equal the one saved.
     public bool Equals(Hold? other) =>
         other is not null && Kb == other.Kb && UpdateId == other.UpdateId && HeldOn == other.HeldOn

@@ -262,4 +262,58 @@ public sealed class PatchLightServiceTests : IDisposable
         Assert.Empty(await _service.ReleaseAllAsync(CancellationToken.None));
         Assert.Empty(_updates.HideCalls);
     }
+
+    [Fact]
+    public async Task Planned_pause_waits_while_windows_does_not_offer_the_update()
+    {
+        await _service.PlanHoldAsync("KB5127648", 14, ["1"], CancellationToken.None);
+
+        var result = await _service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+
+        var hold = Assert.Single(result.ActiveHolds);
+        Assert.True(hold.IsWaiting);
+        Assert.Empty(result.Released);
+        Assert.Empty(_updates.HideCalls);
+    }
+
+    [Fact]
+    public async Task Planned_pause_hides_the_update_once_windows_offers_it_again()
+    {
+        await _service.PlanHoldAsync("KB5127648", 14, ["1"], CancellationToken.None);
+        _updates.Pending.Add(Update());
+        _issues.Issues.Add(Issue(IssueStatus.Confirmed));
+
+        var result = await _service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+
+        Assert.Contains(("id-KB5127648", true), _updates.HideCalls);
+        var hold = Assert.Single(_holds.Load());
+        Assert.Equal("id-KB5127648", hold.UpdateId);
+        Assert.False(hold.IsWaiting);
+        Assert.Equal("id-KB5127648", Assert.Single(result.ActiveHolds).UpdateId);
+    }
+
+    [Fact]
+    public async Task Without_administrator_rights_a_planned_pause_keeps_waiting()
+    {
+        await _service.PlanHoldAsync("KB5127648", 14, ["1"], CancellationToken.None);
+        _updates.Pending.Add(Update());
+
+        var result = await _service.CheckAsync(applyAutoRelease: false, CancellationToken.None);
+
+        Assert.Empty(_updates.HideCalls);
+        Assert.True(Assert.Single(result.ActiveHolds).IsWaiting);
+    }
+
+    [Fact]
+    public async Task Planned_pause_ends_on_time_even_if_never_offered()
+    {
+        await _service.PlanHoldAsync("KB5127648", 3, ["1"], CancellationToken.None);
+        _time.Advance(TimeSpan.FromDays(4));
+
+        var result = await _service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+
+        Assert.Equal(ReleaseReason.Expired, Assert.Single(result.Released).Reason);
+        Assert.Empty(_holds.Load());
+        Assert.Empty(_updates.HideCalls);
+    }
 }

@@ -19,8 +19,30 @@ public sealed class PatchLightService(
 
         var active = new List<Hold>();
         var released = new List<ReleasedHold>();
-        foreach (var hold in holds.Load())
+        var attached = false;
+        foreach (var stored in holds.Load())
         {
+            var hold = stored;
+            if (hold.IsWaiting)
+            {
+                if (now >= hold.ExpiresOn)
+                {
+                    released.Add(new ReleasedHold(hold, ReleaseReason.Expired));
+                    continue;
+                }
+                var offered = verdicts.FindIndex(v => v.Update.Kb == hold.Kb);
+                if (offered >= 0 && applyAutoRelease)
+                {
+                    var update = verdicts[offered].Update;
+                    if (!update.IsHidden) await updates.SetHiddenAsync(update.UpdateId, true, ct);
+                    verdicts[offered] = verdicts[offered] with { Update = update with { IsHidden = true } };
+                    hold = hold with { UpdateId = update.UpdateId };
+                    attached = true;
+                }
+                active.Add(hold);
+                continue;
+            }
+
             var verdict = verdicts.FirstOrDefault(v => v.Update.UpdateId == hold.UpdateId);
             ReleaseReason? reason =
                 verdict is null ? ReleaseReason.Gone
@@ -38,7 +60,7 @@ public sealed class PatchLightService(
             released.Add(new ReleasedHold(hold, reason.Value));
         }
 
-        if (applyAutoRelease && released.Count > 0)
+        if (applyAutoRelease && (released.Count > 0 || attached))
             holds.Save(active);
 
         return new CheckResult(verdicts, active, released, applyAutoRelease, data, now);
@@ -71,6 +93,17 @@ public sealed class PatchLightService(
             await updates.SetHiddenAsync(hold.UpdateId, false, ct);
         holds.Save([]);
         return all;
+    }
+
+    // After PatchLight removes an update, Windows offers it again. This records a pause that is applied
+    // as soon as that happens (by the next check that runs as administrator), and that ends on time like any pause.
+    public Task<Hold> PlanHoldAsync(string kbText, int days, IReadOnlyList<string> issueIds, CancellationToken ct)
+    {
+        var kb = RequireKb(kbText);
+        var now = time.GetUtcNow();
+        var hold = new Hold(kb, "", now, now.AddDays(Math.Clamp(days, 1, HoldPolicy.MaxDays)), "Removed by you", issueIds);
+        holds.Save([.. holds.Load().Where(h => h.Kb != kb), hold]);
+        return Task.FromResult(hold);
     }
 
     public async Task<Hold> HoldAsync(string kbText, int days, string reason, CancellationToken ct)
