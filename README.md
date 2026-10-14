@@ -18,7 +18,7 @@ Microsoft's own list of known problems and gives it a light:
 | 🟡 Wait | A problem with a workaround, or it came out less than 3 days ago. |
 | 🔴 Problems | Microsoft confirmed it breaks something. Pause it. |
 
-![PatchLight showing one update with known problems](docs/images/screenshot.png)
+![PatchLight: a red light for an update with known problems, one click on Pause, the light turns yellow, then History shows which update likely broke something](docs/images/demo.gif)
 
 *(Screenshot of demo mode with made-up updates. Run `PatchLight.exe --demo` to try it without touching anything.)*
 
