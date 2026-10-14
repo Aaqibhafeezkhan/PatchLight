@@ -2,7 +2,8 @@ using PatchLight.Core;
 
 namespace PatchLight.Windows;
 
-public enum DailyCheckState { Off, On, Moved }
+// Outdated: set up by an older PatchLight, so it runs once a day instead of every hour.
+public enum DailyCheckState { Off, On, Moved, Outdated }
 
 // Everything the app talks to: the real PC, or the demo.
 public sealed class Backend

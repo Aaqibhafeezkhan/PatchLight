@@ -27,6 +27,24 @@ public class DailyTaskTests
     }
 
     [Fact]
+    public void Task_repeats_every_hour()
+    {
+        var xml = XDocument.Parse(DailyTask.BuildXml(@"C:\Apps\PatchLight\PatchLight.exe"));
+        var repetition = xml.Descendants(Ns + "CalendarTrigger").Single().Element(Ns + "Repetition")!;
+        Assert.Equal("PT1H", repetition.Element(Ns + "Interval")!.Value);
+        Assert.Equal("P1D", repetition.Element(Ns + "Duration")!.Value);
+    }
+
+    [Fact]
+    public void Task_from_an_older_version_is_not_current()
+    {
+        Assert.True(DailyTask.IsCurrent(DailyTask.BuildXml(@"C:\X\PatchLight.exe")));
+        var old = DailyTask.BuildXml(@"C:\X\PatchLight.exe").Replace("<Interval>PT1H</Interval>", "");
+        Assert.False(DailyTask.IsCurrent(old));
+        Assert.False(DailyTask.IsCurrent("not xml"));
+    }
+
+    [Fact]
     public void Odd_characters_in_the_path_are_escaped()
     {
         var path = @"C:\Tools & <Stuff>\PatchLight.exe";

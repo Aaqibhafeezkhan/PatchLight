@@ -13,11 +13,12 @@ public static class Backends
         {
             Service = PatchLightHost.CreateService(Program.RequireWindows11()),
             Actions = new RunAsAdministrator(),
-            GetDailyCheckAsync = () => Task.Run(() => DailyTask.RegisteredExePath() switch
+            GetDailyCheckAsync = () => Task.Run(() => DailyTask.RegisteredXml() switch
             {
                 null => DailyCheckState.Off,
-                var path when string.Equals(path, exe, StringComparison.OrdinalIgnoreCase) => DailyCheckState.On,
-                _ => DailyCheckState.Moved,
+                var xml when !string.Equals(DailyTask.CommandFromXml(xml), exe, StringComparison.OrdinalIgnoreCase) => DailyCheckState.Moved,
+                var xml when !DailyTask.IsCurrent(xml) => DailyCheckState.Outdated,
+                _ => DailyCheckState.On,
             }),
             GetStartWithWindows = () => autostart.IsEnabled(exe),
             SetStartWithWindows = on =>

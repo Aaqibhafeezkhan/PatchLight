@@ -19,6 +19,7 @@ public static class Program
         // Headless modes: the daily task (as SYSTEM) and the "Run as administrator" helper.
         if (args.Contains(DailyTask.Argument)) return RunBackgroundCheck();
         if (args.Contains(UninstallArgument)) return RunUninstallCleanup();
+        if (args.Contains(DailyTask.RefreshArgument)) return RunRefreshDailyCheck();
         if (ElevatedCommand.Parse(args) is { } command) return RunElevated(command);
 
         var demo = args.Contains("--demo");
@@ -48,7 +49,8 @@ public static class Program
         {
             DataFolder.Secure(SystemInfo.DataDirectory);
             var service = PatchLightHost.CreateService(RequireWindows11());
-            BackgroundCheck.RunAsync(service, logPath, TimeProvider.System, CancellationToken.None).GetAwaiter().GetResult();
+            BackgroundCheck.RunAsync(service, logPath, TimeProvider.System, CancellationToken.None,
+                PatchLightHost.CreateProtectionStore(), waitWithHolds: SystemInfo.IsHomeEdition()).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
@@ -65,6 +67,21 @@ public static class Program
             }
         }
         return 0;
+    }
+
+    // Run by the installer after an update, so an older daily task becomes the hourly one.
+    private static int RunRefreshDailyCheck()
+    {
+        try
+        {
+            DailyTask.Refresh(Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file."));
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write(ex);
+            return 1;
+        }
     }
 
     // Each step is best effort: uninstalling must always finish, and every step that can run should.

@@ -14,6 +14,10 @@ public static class PatchLightHost
 
     public static string BackgroundLogPath(string dataDirectory) => Path.Combine(dataDirectory, "last-background-check.json");
 
+    // Protection settings: read by the background check, written only by the administrator helper.
+    public static ProtectionStore CreateProtectionStore(string? dataDirectory = null) =>
+        new(Path.Combine(dataDirectory ?? SystemInfo.DataDirectory, "settings.json"));
+
     // Tech-news reports are kept per person, next to their settings.
     public static INewsSource CreateNewsSource() => new RssNewsSource(NewHttpClient(),
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight", "news.json"),

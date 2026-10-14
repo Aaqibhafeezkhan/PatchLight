@@ -93,6 +93,71 @@ public sealed class BackgroundCheckTests : IDisposable
     }
 
     [Fact]
+    public async Task Red_update_is_paused_and_logged_when_auto_pause_is_on()
+    {
+        var holds = new HoldStore(Path.Combine(dir, "holds.json"));
+        var settings = new ProtectionStore(Path.Combine(dir, "settings.json"));
+        settings.Save(new ProtectionSettings(AutoPauseRed: true));
+        updates.Pending.Add(Update());
+        var issues = new FakeIssueSource(time);
+        issues.Issues.Add(Issue(IssueStatus.Confirmed));
+
+        var log = await BackgroundCheck.RunAsync(Service(issues, holds), LogPath, time, CancellationToken.None, settings);
+
+        Assert.Equal(["KB5127648"], log.Paused);
+        Assert.Null(log.Error);
+        Assert.Equal(["KB5127648"], BackgroundCheck.ReadLog(LogPath)!.Paused);
+        Assert.Equal(PatchLightService.AutoReason, Assert.Single(holds.Load()).Reason);
+    }
+
+    [Fact]
+    public async Task Pause_that_ran_out_is_remembered_as_let_through()
+    {
+        var holds = new HoldStore(Path.Combine(dir, "holds.json"));
+        var settings = new ProtectionStore(Path.Combine(dir, "settings.json"));
+        settings.Save(new ProtectionSettings(AutoPauseRed: true));
+        updates.Pending.Add(Update(hidden: true));
+        var issues = new FakeIssueSource(time);
+        issues.Issues.Add(Issue(IssueStatus.Confirmed));
+        holds.Save([new Hold("KB5127648", "id-KB5127648", time.GetUtcNow().AddDays(-15), time.GetUtcNow().AddDays(-1),
+            "Paused by you", ["1"])]);
+
+        var log = await BackgroundCheck.RunAsync(Service(issues, holds), LogPath, time, CancellationToken.None, settings);
+
+        Assert.Equal(["KB5127648"], log.Resumed);
+        Assert.Empty(log.Paused);
+        Assert.Equal([new LetThrough("KB5127648", ["1"])], settings.Load().LetThrough);
+    }
+
+    [Fact]
+    public async Task Damaged_settings_change_nothing()
+    {
+        var holds = new HoldStore(Path.Combine(dir, "holds.json"));
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "settings.json"), "{ nope");
+        updates.Pending.Add(Update());
+        var issues = new FakeIssueSource(time);
+        issues.Issues.Add(Issue(IssueStatus.Confirmed));
+
+        var log = await BackgroundCheck.RunAsync(Service(issues, holds), LogPath, time, CancellationToken.None,
+            new ProtectionStore(Path.Combine(dir, "settings.json")), waitWithHolds: true);
+
+        Assert.Empty(log.Paused);
+        Assert.Null(log.Error);
+        Assert.Empty(updates.HideCalls);
+    }
+
+    [Fact]
+    public void Log_from_an_older_version_reads_with_nothing_paused()
+    {
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(LogPath, """{ "RanAt": "2026-10-13T17:00:00+00:00", "Resumed": ["KB5127648"], "Error": null }""");
+        var log = BackgroundCheck.ReadLog(LogPath)!;
+        Assert.Equal(["KB5127648"], log.Resumed);
+        Assert.Empty(log.Paused);
+    }
+
+    [Fact]
     public void Missing_or_damaged_log_reads_as_nothing()
     {
         Assert.Null(BackgroundCheck.ReadLog(LogPath));

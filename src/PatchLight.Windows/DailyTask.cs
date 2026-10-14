@@ -8,25 +8,35 @@ using PatchLight.Core;
 
 namespace PatchLight.Windows;
 
-// The scheduled task that runs "PatchLight.exe --background-check" once a day as SYSTEM,
-// so fixed updates resume even when nobody opens the app. Changing it needs administrator rights.
+// The scheduled task that runs "PatchLight.exe --background-check" every hour as SYSTEM, so fixed updates
+// resume even when nobody opens the app, and new ones are paused before Windows gets them ready.
+// It keeps its old "Daily check" name so older installs need nothing renamed. Changing it needs administrator rights.
 [SupportedOSPlatform("windows")]
 public static class DailyTask
 {
     public const string Name = @"\PatchLight\Daily check";
     public const string Argument = "--background-check";
 
+    // Run by the installer as administrator: brings an existing task up to date, never creates one.
+    public const string RefreshArgument = "--refresh-daily-check";
+    private const string Every = "PT1H";
+
     public static string BuildXml(string exePath) => $"""
         <?xml version="1.0" encoding="UTF-16"?>
         <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
           <RegistrationInfo>
             <Author>PatchLight</Author>
-            <Description>Resumes Windows updates that PatchLight paused once Microsoft fixes them, and ends pauses that ran out.</Description>
+            <Description>Every hour: resumes Windows updates that PatchLight paused once Microsoft fixes them, ends pauses that ran out, and applies PatchLight's protection settings.</Description>
           </RegistrationInfo>
           <Triggers>
             <CalendarTrigger>
               <StartBoundary>2026-01-01T10:00:00</StartBoundary>
               <Enabled>true</Enabled>
+              <Repetition>
+                <Interval>{Every}</Interval>
+                <Duration>P1D</Duration>
+                <StopAtDurationEnd>false</StopAtDurationEnd>
+              </Repetition>
               <ScheduleByDay>
                 <DaysInterval>1</DaysInterval>
               </ScheduleByDay>
@@ -59,6 +69,32 @@ public static class DailyTask
           </Actions>
         </Task>
         """;
+
+    // Tasks made by PatchLight 0.4 and older run once a day.
+    public static bool IsCurrent(string xml)
+    {
+        try
+        {
+            return XDocument.Parse(xml).Descendants().Any(e => e.Name.LocalName == "Interval" && e.Value == Every);
+        }
+        catch (XmlException)
+        {
+            return false;
+        }
+    }
+
+    // Missing, pointing at another copy of PatchLight, or from an older version.
+    public static bool NeedsRegister(string exePath)
+    {
+        var xml = RegisteredXml();
+        return xml is null || !string.Equals(CommandFromXml(xml), exePath, StringComparison.OrdinalIgnoreCase) || !IsCurrent(xml);
+    }
+
+    // Brings an existing task up to date; does nothing when there is none.
+    public static void Refresh(string exePath)
+    {
+        if (RegisteredXml() is not null) Register(exePath);
+    }
 
     public static string? CommandFromXml(string xml)
     {
@@ -100,10 +136,13 @@ public static class DailyTask
     }
 
     // The program the task runs, or null when the task doesn't exist.
-    public static string? RegisteredExePath()
+    public static string? RegisteredExePath() => RegisteredXml() is { } xml ? CommandFromXml(xml) : null;
+
+    // The task as Task Scheduler has it, or null when it doesn't exist.
+    public static string? RegisteredXml()
     {
         var (code, output) = Schtasks("/Query", "/TN", Name, "/XML");
-        return code == 0 ? CommandFromXml(output) : null;
+        return code == 0 ? output : null;
     }
 
     private static (int ExitCode, string Output) Schtasks(params string[] args)
