@@ -39,4 +39,19 @@ public static class AlertPlanner
         };
         return (alerts, next);
     }
+
+    // The daily check runs without a window, so the app tells the person what it did the next time it checks.
+    public static (Alert? Alert, AppState Next) PlanBackground(AppState state, DateTimeOffset ranAt, IReadOnlyList<string> resumed)
+    {
+        if (state.SeenBackgroundRun is { } seen && ranAt <= seen) return (null, state);
+
+        var next = state with { SeenBackgroundRun = ranAt };
+        var alert = resumed.Count switch
+        {
+            0 => null,
+            1 => new Alert($"PatchLight resumed {resumed[0]}", "Microsoft fixed it or the pause ended. Windows Update will install it."),
+            _ => new Alert($"PatchLight resumed {resumed.Count} updates", "Microsoft fixed them or their pauses ended. Windows Update will install them."),
+        };
+        return (alert, next);
+    }
 }

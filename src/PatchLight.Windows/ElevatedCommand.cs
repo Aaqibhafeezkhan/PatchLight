@@ -16,7 +16,20 @@ public interface IElevatedActions
 [SupportedOSPlatform("windows")]
 public sealed class ElevatedActions(PatchLightService service, string exePath) : IElevatedActions
 {
-    public Task HoldAsync(string kb, int days, CancellationToken ct) => service.HoldAsync(kb, days, "Paused by you", ct);
+    // A pause must always end, so pausing also turns on the daily check that ends it.
+    public async Task HoldAsync(string kb, int days, CancellationToken ct)
+    {
+        await service.HoldAsync(kb, days, "Paused by you", ct);
+        try
+        {
+            var registered = DailyTask.RegisteredExePath();
+            if (!string.Equals(registered, exePath, StringComparison.OrdinalIgnoreCase)) DailyTask.Register(exePath);
+        }
+        catch (PatchLightException)
+        {
+            // The pause worked; the app's Settings page shows the daily check is off.
+        }
+    }
 
     public Task ReleaseAsync(string kb, CancellationToken ct) => service.ReleaseAsync(kb, ct);
 

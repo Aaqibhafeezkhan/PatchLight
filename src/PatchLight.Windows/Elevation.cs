@@ -46,3 +46,20 @@ public static class Elevation
         }
     }
 }
+
+// What the app (running as a normal user) uses: each action becomes one Windows permission prompt.
+[SupportedOSPlatform("windows")]
+public sealed class RunAsAdministrator : IElevatedActions
+{
+    public Task HoldAsync(string kb, int days, CancellationToken ct) =>
+        Elevation.RunSelfElevatedAsync(ElevatedCommand.HoldArgs(kb, days), ct);
+
+    public Task ReleaseAsync(string kb, CancellationToken ct) =>
+        Elevation.RunSelfElevatedAsync(ElevatedCommand.ReleaseArgs(kb), ct);
+
+    public Task EnableDailyCheckAsync(CancellationToken ct) =>
+        Elevation.RunSelfElevatedAsync(ElevatedCommand.EnableDailyCheckArgs, ct);
+
+    public Task DisableDailyCheckAsync(CancellationToken ct) =>
+        Elevation.RunSelfElevatedAsync(ElevatedCommand.DisableDailyCheckArgs, ct);
+}

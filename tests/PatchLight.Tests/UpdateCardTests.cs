@@ -86,3 +86,13 @@ public class UpdateCardTests
         Assert.Equal(2, card.FixCount);
     }
 }
+
+public class UpdateCardOrderTests
+{
+    [Fact]
+    public void Paused_updates_go_last()
+    {
+        var cards = UpdateCard.Build(Result([Verdict(Light.Red, "KB1000001", hidden: true), Verdict(Light.Green, "KB1000002")]));
+        Assert.Equal(["KB1000002", "KB1000001"], cards.Select(c => c.Kb));
+    }
+}

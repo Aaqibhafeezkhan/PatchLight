@@ -18,8 +18,10 @@ public sealed record UpdateCard(
     {
         // An update that is ready to resume is still hidden until someone resumes it.
         var holds = result.ActiveHolds.Concat(result.Released.Select(r => r.Hold)).ToList();
+        // Paused updates can't hurt the PC, so they go last.
         return result.Verdicts
-            .OrderByDescending(v => v.Light)
+            .OrderBy(v => v.Update.IsHidden)
+            .ThenByDescending(v => v.Light)
             .ThenBy(v => v.Update.Title, StringComparer.CurrentCultureIgnoreCase)
             .Select(v => From(v, holds.FirstOrDefault(h => h.UpdateId == v.Update.UpdateId)))
             .ToList();

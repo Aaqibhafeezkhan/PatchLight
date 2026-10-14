@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/PatchLight.App/PatchLight.App.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+    </Project>
     <Project Path="src/PatchLight.Cli/PatchLight.Cli.csproj" />
     <Project Path="src/PatchLight.Core/PatchLight.Core.csproj" />
     <Project Path="src/PatchLight.Windows/PatchLight.Windows.csproj" />

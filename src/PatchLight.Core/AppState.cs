@@ -6,14 +6,15 @@ namespace PatchLight.Core;
 public sealed record AppState(
     int PauseDays = HoldPolicy.DefaultDays,
     IReadOnlyList<string>? NotifiedProblems = null,
-    IReadOnlyList<string>? NotifiedFixed = null)
+    IReadOnlyList<string>? NotifiedFixed = null,
+    DateTimeOffset? SeenBackgroundRun = null)
 {
     public int PauseDays { get; init; } = Math.Clamp(PauseDays, 1, HoldPolicy.MaxDays);
     public IReadOnlyList<string> NotifiedProblems { get; init; } = NotifiedProblems ?? [];
     public IReadOnlyList<string> NotifiedFixed { get; init; } = NotifiedFixed ?? [];
 
     public bool Equals(AppState? other) =>
-        other is not null && PauseDays == other.PauseDays
+        other is not null && PauseDays == other.PauseDays && SeenBackgroundRun == other.SeenBackgroundRun
         && NotifiedProblems.SequenceEqual(other.NotifiedProblems) && NotifiedFixed.SequenceEqual(other.NotifiedFixed);
 
     public override int GetHashCode() => PauseDays;

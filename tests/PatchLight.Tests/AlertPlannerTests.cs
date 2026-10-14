@@ -85,3 +85,33 @@ public class AlertPlannerTests
         Assert.Equal(21, next.PauseDays);
     }
 }
+
+public class BackgroundAlertTests
+{
+    private static readonly DateTimeOffset Ran = new(2026, 10, 14, 10, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void Updates_resumed_by_the_daily_check_alert_once()
+    {
+        var (alert, next) = AlertPlanner.PlanBackground(new AppState(), Ran, ["KB5127648"]);
+        Assert.Equal("PatchLight resumed KB5127648", alert!.Title);
+        Assert.Equal("Microsoft fixed it or the pause ended. Windows Update will install it.", alert.Body);
+        Assert.Equal(Ran, next.SeenBackgroundRun);
+        Assert.Null(AlertPlanner.PlanBackground(next, Ran, ["KB5127648"]).Alert);
+    }
+
+    [Fact]
+    public void Several_resumed_updates_make_one_alert()
+    {
+        var (alert, _) = AlertPlanner.PlanBackground(new AppState(), Ran, ["KB1000001", "KB1000002"]);
+        Assert.Equal("PatchLight resumed 2 updates", alert!.Title);
+    }
+
+    [Fact]
+    public void Run_that_resumed_nothing_is_quiet_but_remembered()
+    {
+        var (alert, next) = AlertPlanner.PlanBackground(new AppState(), Ran, []);
+        Assert.Null(alert);
+        Assert.Equal(Ran, next.SeenBackgroundRun);
+    }
+}
