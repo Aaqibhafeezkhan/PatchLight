@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/PatchLight.Cli/PatchLight.Cli.csproj" />
     <Project Path="src/PatchLight.Core/PatchLight.Core.csproj" />
     <Project Path="src/PatchLight.Windows/PatchLight.Windows.csproj" />
   </Folder>
