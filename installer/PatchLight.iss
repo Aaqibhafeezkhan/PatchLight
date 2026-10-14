@@ -10,6 +10,9 @@ AppId={{6E2F3B1A-8C4D-4F7E-9B2A-5D1C0E7F4A93}
 AppName=PatchLight
 AppVersion={#AppVersion}
 AppVerName=PatchLight {#AppVersion}
+VersionInfoProductName=PatchLight
+VersionInfoVersion={#AppVersion}
+VersionInfoDescription=PatchLight installer
 AppPublisher=PatchLight contributors
 AppPublisherURL=https://github.com/yo-gabriel-portfolio-here/PatchLight
 AppSupportURL=https://github.com/yo-gabriel-portfolio-here/PatchLight/issues
@@ -36,7 +39,12 @@ OutputDir=..\dist
 OutputBaseFilename=PatchLight-Setup
 
 [Tasks]
+Name: "startwithwindows"; Description: "Start PatchLight with Windows (it waits quietly in the tray and warns you about bad updates)"
 Name: "desktopicon"; Description: "Add a shortcut to the desktop"; Flags: unchecked
+
+[Registry]
+; Same entry the app's "Start with Windows" switch uses, so the person can turn it off there too.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "PatchLight"; ValueData: """{app}\PatchLight.exe"" --tray"; Flags: uninsdeletevalue; Tasks: startwithwindows
 
 [Files]
 Source: "..\dist\PatchLight\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

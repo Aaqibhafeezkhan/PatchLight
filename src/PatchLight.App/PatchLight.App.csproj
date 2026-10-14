@@ -6,7 +6,6 @@
     <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
     <RootNamespace>PatchLight.App</RootNamespace>
     <AssemblyName>PatchLight</AssemblyName>
-    <Version>0.2.1</Version>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UseWinUI>true</UseWinUI>

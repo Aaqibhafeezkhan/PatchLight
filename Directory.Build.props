@@ -4,5 +4,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- One name and version for every file, so signed builds can be checked against them. -->
+    <Product>PatchLight</Product>
+    <Company>PatchLight contributors</Company>
+    <Copyright>MIT License</Copyright>
+    <Version>0.2.2</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 </Project>

@@ -22,7 +22,7 @@ Compress-Archive -Path (Join-Path $dist 'PatchLight') -DestinationPath (Join-Pat
 $iscc = @("$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") |
     Where-Object { Test-Path $_ } | Select-Object -First 1
 if ($iscc) {
-    $version = ([xml](Get-Content (Join-Path $root 'src\PatchLight.App\PatchLight.App.csproj'))).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+    $version = ([xml](Get-Content (Join-Path $root 'Directory.Build.props'))).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
     & $iscc /Q "/DAppVersion=$version" (Join-Path $root 'installer\PatchLight.iss')
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed.' }
 } else {

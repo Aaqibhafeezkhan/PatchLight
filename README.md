@@ -4,7 +4,7 @@
 
 **Know if a Windows update is safe before you install it.**
 
-**[⬇ Download PatchLight for Windows 11](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** (installer, 46 MB) · [All downloads](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest)
+**[⬇ Download PatchLight for Windows 11](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** (installer, 46 MB) · [All downloads](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest) · [Code signing policy](#code-signing-policy)
 
 > Use the download link above. The green **Code → Download ZIP** button gives you the source code, not the app.
 
@@ -37,7 +37,7 @@ Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/wi
 
 1. Download **[PatchLight-Setup.exe](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** and open it.
 2. Windows asks for permission, then PatchLight installs and opens. Find it later in the Start menu.
-3. It starts with Windows from then on and waits in the tray. You can turn that off in **Settings**.
+3. The installer asks whether PatchLight should start with Windows (it then waits in the tray). You can change that any time in **Settings**.
 
 The files aren't code-signed yet, so Windows SmartScreen may warn you the first time. Choose **More info**, then **Run anyway**.
 
@@ -67,6 +67,35 @@ patchlight history               Which recent update likely broke something
 
 Open **Settings → Apps → Installed apps**, find PatchLight and choose **Uninstall**. It resumes every update PatchLight
 paused, removes the daily check and "Start with Windows", and deletes its data in `C:\ProgramData\PatchLight`.
+
+## Privacy
+
+PatchLight doesn't collect, send or share anything about you or your PC. It only does two things over the network:
+it downloads Microsoft's public Windows release health page for your Windows version, and it asks Windows Update on
+your own PC which updates are waiting. No account, no analytics, no server of ours.
+This program will not transfer any information to other networked systems unless specifically requested by the user
+or the person installing or operating it.
+
+### What PatchLight changes on your PC
+
+All of these are removed when you uninstall:
+- **Start with Windows** (if you choose it): one entry in your account's startup programs.
+- **Daily automatic check**: a task in Task Scheduler, `\PatchLight\Daily check`, turned on when you pause an update or in Settings.
+- **Paused updates**: hidden with Windows Update's own "hide this update" switch, never uninstalled or blocked.
+- **Data**: `C:\ProgramData\PatchLight` (pauses, a saved copy of Microsoft's page) and `%LOCALAPPDATA%\PatchLight` (your settings).
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+Every download is built by [GitHub Actions](.github/workflows/release.yml) from the code in this repository, and each
+release is approved by hand before it is signed.
+
+Team roles:
+- Committers and reviewers: [yo-gabriel-portfolio-here](https://github.com/yo-gabriel-portfolio-here)
+- Approvers: [yo-gabriel-portfolio-here](https://github.com/yo-gabriel-portfolio-here)
+
+See [Privacy](#privacy) for what the program does over the network.
 
 ## Build
 

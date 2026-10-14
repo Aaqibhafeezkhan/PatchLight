@@ -37,7 +37,6 @@ public partial class App : Application
     {
         window = new MainWindow(controller);
         CreateTray();
-        FirstRunSetup();
 
         controller.Changed += () => window.DispatcherQueue.TryEnqueue(UpdateTray);
         controller.AlertRaised += alert => window.DispatcherQueue.TryEnqueue(() => tray?.ShowNotification(alert.Title, alert.Body));
@@ -83,23 +82,6 @@ public partial class App : Application
         };
         tray.IconSource = new BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", $"tray-{name}.ico")));
         tray.ToolTipText = $"PatchLight: {controller.Headline}";
-    }
-
-    // The first time PatchLight runs it starts with Windows, so the tray light is always there.
-    private void FirstRunSetup()
-    {
-        var marker = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight",
-            options.Demo ? "demo-first-run-done" : "first-run-done");
-        if (File.Exists(marker)) return;
-        try
-        {
-            if (!options.Demo) controller.StartWithWindows = true;
-            Directory.CreateDirectory(Path.GetDirectoryName(marker)!);
-            File.WriteAllText(marker, "");
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
     }
 
     // A second launch of PatchLight signals this one to show its window.
