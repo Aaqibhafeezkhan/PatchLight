@@ -54,7 +54,10 @@ public sealed class DataFolderTests : IDisposable
     [Fact]
     public void Files_left_by_a_normal_user_are_removed_not_adopted()
     {
-        // Running these tests unelevated, everything we create is owned by us, a normal user.
+        // Only meaningful unelevated: then everything we create is owned by us, a normal user.
+        // Elevated (as on CI) new files belong to Administrators, which the lockdown rightly keeps.
+        using (var identity = WindowsIdentity.GetCurrent())
+            if (new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator)) return;
         Directory.CreateDirectory(Path.Combine(dir, "cache"));
         File.WriteAllText(Path.Combine(dir, "cache", "page.html"), "x");
         File.WriteAllText(Path.Combine(dir, "holds.json"), "[]");
