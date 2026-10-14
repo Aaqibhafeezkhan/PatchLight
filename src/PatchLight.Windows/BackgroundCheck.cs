@@ -29,7 +29,16 @@ public static class BackgroundCheck
         catch (Exception ex)
         {
             var message = ex is PatchLightException ? ex.Message : $"Something went wrong: {ex.GetType().Name}.";
-            log = new BackgroundCheckLog(time.GetUtcNow(), [], message);
+            IReadOnlyList<string> ended = [];
+            try
+            {
+                ended = (await service.ReleaseExpiredAsync(ct)).Select(h => h.Kb).ToList();
+            }
+            catch (Exception)
+            {
+                // Windows Update itself isn't answering; try again tomorrow.
+            }
+            log = new BackgroundCheckLog(time.GetUtcNow(), ended, message);
         }
 
         try

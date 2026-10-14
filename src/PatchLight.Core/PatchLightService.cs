@@ -41,6 +41,22 @@ public sealed class PatchLightService(
         return new CheckResult(verdicts, active, released, applyAutoRelease, data, now);
     }
 
+    // Ends pauses whose time ran out, without needing Microsoft's list. Used when a full check can't run,
+    // because a pause must end on time no matter what. Returns the pauses it ended.
+    public async Task<IReadOnlyList<Hold>> ReleaseExpiredAsync(CancellationToken ct)
+    {
+        var all = holds.Load();
+        var now = time.GetUtcNow();
+        var expired = all.Where(h => now >= h.ExpiresOn).ToList();
+        if (expired.Count == 0) return [];
+
+        var pending = await updates.GetPendingAsync(ct);
+        foreach (var hold in expired.Where(h => pending.Any(u => u.UpdateId == h.UpdateId)))
+            await updates.SetHiddenAsync(hold.UpdateId, false, ct);
+        holds.Save([.. all.Except(expired)]);
+        return expired;
+    }
+
     public async Task<Hold> HoldAsync(string kbText, int days, string reason, CancellationToken ct)
     {
         var kb = RequireKb(kbText);

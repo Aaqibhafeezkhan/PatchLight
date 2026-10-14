@@ -49,6 +49,37 @@ public sealed class BackgroundCheckTests : IDisposable
     }
 
     [Fact]
+    public async Task Expired_pause_ends_even_when_microsoft_cannot_be_reached()
+    {
+        var holds = new HoldStore(Path.Combine(dir, "holds.json"));
+        updates.Pending.Add(Update(hidden: true));
+        holds.Save([new Hold("KB5127648", "id-KB5127648", time.GetUtcNow().AddDays(-15), time.GetUtcNow().AddDays(-1),
+            "Paused by you", ["1"])]);
+
+        var log = await BackgroundCheck.RunAsync(Service(new ThrowingIssueSource(), holds), LogPath, time, CancellationToken.None);
+
+        Assert.Equal("No internet.", log.Error);
+        Assert.Equal(["KB5127648"], log.Resumed);
+        Assert.Contains(("id-KB5127648", false), updates.HideCalls);
+        Assert.Empty(holds.Load());
+    }
+
+    [Fact]
+    public async Task Pause_that_has_not_ended_stays_when_microsoft_cannot_be_reached()
+    {
+        var holds = new HoldStore(Path.Combine(dir, "holds.json"));
+        updates.Pending.Add(Update(hidden: true));
+        holds.Save([new Hold("KB5127648", "id-KB5127648", time.GetUtcNow().AddDays(-1), time.GetUtcNow().AddDays(5),
+            "Paused by you", ["1"])]);
+
+        var log = await BackgroundCheck.RunAsync(Service(new ThrowingIssueSource(), holds), LogPath, time, CancellationToken.None);
+
+        Assert.Empty(log.Resumed);
+        Assert.Empty(updates.HideCalls);
+        Assert.Single(holds.Load());
+    }
+
+    [Fact]
     public void Missing_or_damaged_log_reads_as_nothing()
     {
         Assert.Null(BackgroundCheck.ReadLog(LogPath));

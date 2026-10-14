@@ -21,7 +21,7 @@ public sealed partial class MainWindow : Window
     private static readonly Color OffColor = Color.FromArgb(255, 55, 65, 81);
 
     private readonly AppController controller;
-    private bool updatingSettings;
+    private int settingsVersion;
 
     public bool AllowClose { get; set; }
 
@@ -169,12 +169,14 @@ public sealed partial class MainWindow : Window
         return Card(body);
     }
 
-    private async Task RunCardAction(Button button, Func<Task<string?>> action, string success)
+    private async Task RunCardAction(Button button, Func<Task<ActionResult>> action, string success)
     {
         button.IsEnabled = false;
-        var error = await action();
+        var result = await action();
         button.IsEnabled = true;
-        Show(error is null ? InfoBarSeverity.Success : InfoBarSeverity.Warning, error ?? success);
+        // A warning means it worked but something around it needs the person's attention.
+        Show(result.Succeeded && result.Message is null ? InfoBarSeverity.Success : InfoBarSeverity.Warning,
+            result.Message ?? success);
     }
 
     // ---- History ----
@@ -234,17 +236,15 @@ public sealed partial class MainWindow : Window
     private async Task ShowSettingsAsync()
     {
         PageContent.Children.Clear();
-        updatingSettings = true;
+        // Switching tabs while Task Scheduler is still answering must not let the old page touch the new one.
+        var version = ++settingsVersion;
 
         var startWithWindows = new ToggleSwitch { Header = "Start with Windows", IsOn = controller.StartWithWindows };
-        startWithWindows.Toggled += (_, _) =>
-        {
-            if (!updatingSettings) controller.StartWithWindows = startWithWindows.IsOn;
-        };
+        startWithWindows.Toggled += (_, _) => controller.StartWithWindows = startWithWindows.IsOn;
         PageContent.Children.Add(Card(Section(startWithWindows,
             "PatchLight waits quietly in the tray, checks every few hours and tells you when an update has known problems.")));
 
-        var daily = new ToggleSwitch { Header = "Daily automatic check" };
+        var daily = new ToggleSwitch { Header = "Daily automatic check", IsEnabled = false };
         var dailyText = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Secondary() };
         var dailyPanel = Section(daily,
             "Once a day, even when PatchLight is closed, Windows runs a quick check that resumes paused updates " +
@@ -276,22 +276,24 @@ public sealed partial class MainWindow : Window
         PageContent.Children.Add(Card(about));
 
         var state = await controller.GetDailyCheckAsync();
+        if (version != settingsVersion) return;
         daily.IsOn = state == DailyCheckState.On;
         dailyText.Text = DailyText(state);
-        updatingSettings = false;
+        daily.IsEnabled = true;
 
+        var showingState = false;
         daily.Toggled += async (_, _) =>
         {
-            if (updatingSettings) return;
+            if (showingState) return;
             daily.IsEnabled = false;
-            var error = await controller.SetDailyCheckAsync(daily.IsOn);
+            var result = await controller.SetDailyCheckAsync(daily.IsOn);
             var now = await controller.GetDailyCheckAsync();
-            updatingSettings = true;
+            showingState = true;
             daily.IsOn = now == DailyCheckState.On;
-            updatingSettings = false;
+            showingState = false;
             dailyText.Text = DailyText(now);
             daily.IsEnabled = true;
-            if (error is not null) Show(InfoBarSeverity.Warning, error);
+            if (!result.Succeeded) Show(InfoBarSeverity.Warning, result.Message!);
         };
     }
 

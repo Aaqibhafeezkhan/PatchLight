@@ -81,7 +81,12 @@ public static class DemoData
 
         public bool DailyCheckOn => dailyCheck;
 
-        public Task HoldAsync(string kb, int days, CancellationToken ct) => service.HoldAsync(kb, days, "Paused by you", ct);
+        public async Task<string?> HoldAsync(string kb, int days, CancellationToken ct)
+        {
+            await service.HoldAsync(kb, days, "Paused by you", ct);
+            dailyCheck = true;
+            return null;
+        }
 
         public Task ReleaseAsync(string kb, CancellationToken ct) => service.ReleaseAsync(kb, ct);
 

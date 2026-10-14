@@ -11,7 +11,8 @@ public static class Elevation
     private const int UserCancelled = 1223;
 
     // Starts this program again as administrator (Windows shows its permission prompt) and waits for it.
-    public static async Task RunSelfElevatedAsync(IReadOnlyList<string> args, CancellationToken ct)
+    // Returns a warning to show, or throws with a plain message.
+    public static async Task<string?> RunSelfElevatedAsync(IReadOnlyList<string> args, CancellationToken ct)
     {
         var exe = Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file.");
         var resultPath = Path.Combine(Path.GetTempPath(), $"patchlight-result-{Guid.NewGuid():N}.txt");
@@ -33,17 +34,29 @@ public static class Elevation
             }
             if (process is null) throw new PatchLightException("Something went wrong.");
 
+            int exitCode;
             using (process)
+            {
                 await process.WaitForExitAsync(ct);
-
-            var message = File.Exists(resultPath) ? (await File.ReadAllTextAsync(resultPath, ct)).Trim() : null;
-            if (!string.IsNullOrEmpty(message)) throw new PatchLightException(message);
-            if (message is null) throw new PatchLightException("Something went wrong.");
+                exitCode = process.ExitCode;
+            }
+            return ReadResult(File.Exists(resultPath) ? await File.ReadAllTextAsync(resultPath, ct) : null, exitCode);
         }
         finally
         {
             File.Delete(resultPath);
         }
+    }
+
+    // Empty = done; "warning:..." = done, with something to tell the person; anything else = what went wrong.
+    public static string? ReadResult(string? content, int exitCode)
+    {
+        if (content is null) throw new PatchLightException("Something went wrong.");
+        var message = content.Trim();
+        if (message.StartsWith(ElevatedCommand.WarningPrefix, StringComparison.Ordinal))
+            return message[ElevatedCommand.WarningPrefix.Length..].Trim();
+        if (message.Length > 0) throw new PatchLightException(message);
+        return exitCode == 0 ? null : throw new PatchLightException("Something went wrong.");
     }
 }
 
@@ -51,7 +64,7 @@ public static class Elevation
 [SupportedOSPlatform("windows")]
 public sealed class RunAsAdministrator : IElevatedActions
 {
-    public Task HoldAsync(string kb, int days, CancellationToken ct) =>
+    public Task<string?> HoldAsync(string kb, int days, CancellationToken ct) =>
         Elevation.RunSelfElevatedAsync(ElevatedCommand.HoldArgs(kb, days), ct);
 
     public Task ReleaseAsync(string kb, CancellationToken ct) =>

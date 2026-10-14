@@ -7,7 +7,8 @@ namespace PatchLight.Windows;
 // started with "Run as administrator".
 public interface IElevatedActions
 {
-    Task HoldAsync(string kb, int days, CancellationToken ct);
+    // Returns a warning when the pause worked but something around it didn't.
+    Task<string?> HoldAsync(string kb, int days, CancellationToken ct);
     Task ReleaseAsync(string kb, CancellationToken ct);
     Task EnableDailyCheckAsync(CancellationToken ct);
     Task DisableDailyCheckAsync(CancellationToken ct);
@@ -17,17 +18,19 @@ public interface IElevatedActions
 public sealed class ElevatedActions(PatchLightService service, string exePath) : IElevatedActions
 {
     // A pause must always end, so pausing also turns on the daily check that ends it.
-    public async Task HoldAsync(string kb, int days, CancellationToken ct)
+    public async Task<string?> HoldAsync(string kb, int days, CancellationToken ct)
     {
-        await service.HoldAsync(kb, days, "Paused by you", ct);
+        var hold = await service.HoldAsync(kb, days, "Paused by you", ct);
         try
         {
             var registered = DailyTask.RegisteredExePath();
             if (!string.Equals(registered, exePath, StringComparison.OrdinalIgnoreCase)) DailyTask.Register(exePath);
+            return null;
         }
-        catch (PatchLightException)
+        catch (PatchLightException ex)
         {
-            // The pause worked; the app's Settings page shows the daily check is off.
+            return $"Paused {hold.Kb}, but the daily check that ends pauses couldn't be turned on. {ex.Message} " +
+                $"Until then, resume {hold.Kb} yourself by {hold.ExpiresOn.ToLocalTime():MMM d}.";
         }
     }
 
@@ -46,6 +49,7 @@ public sealed record ElevatedCommand(string Verb, string? Kb, int Days, string R
     private const string Release = "--release";
     private const string Enable = "--enable-daily-check";
     private const string Disable = "--disable-daily-check";
+    public const string WarningPrefix = "warning:";
 
     public static IReadOnlyList<string> HoldArgs(string kb, int days) => [Hold, kb, "--days", days.ToString()];
     public static IReadOnlyList<string> ReleaseArgs(string kb) => [Release, kb];
@@ -80,14 +84,15 @@ public sealed record ElevatedCommand(string Verb, string? Kb, int Days, string R
         string message;
         try
         {
-            await (Verb switch
+            string? warning = null;
+            switch (Verb)
             {
-                Hold => actions.HoldAsync(Kb!, Days, ct),
-                Release => actions.ReleaseAsync(Kb!, ct),
-                Enable => actions.EnableDailyCheckAsync(ct),
-                _ => actions.DisableDailyCheckAsync(ct),
-            });
-            message = "";
+                case Hold: warning = await actions.HoldAsync(Kb!, Days, ct); break;
+                case Release: await actions.ReleaseAsync(Kb!, ct); break;
+                case Enable: await actions.EnableDailyCheckAsync(ct); break;
+                default: await actions.DisableDailyCheckAsync(ct); break;
+            }
+            message = warning is null ? "" : WarningPrefix + warning;
         }
         catch (PatchLightException ex)
         {
@@ -99,7 +104,7 @@ public sealed record ElevatedCommand(string Verb, string? Kb, int Days, string R
         }
 
         await File.WriteAllTextAsync(ResultPath, message, CancellationToken.None);
-        return message.Length == 0 ? 0 : 2;
+        return message.Length == 0 || message.StartsWith(WarningPrefix, StringComparison.Ordinal) ? 0 : 2;
     }
 
     private static string? ValueAfter(string[] args, string name)

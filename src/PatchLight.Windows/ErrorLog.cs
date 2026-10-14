@@ -1,4 +1,4 @@
-namespace PatchLight.App;
+namespace PatchLight.Windows;
 
 // Same place the command line uses, so one file tells what went wrong last.
 public static class ErrorLog

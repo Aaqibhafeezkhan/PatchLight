@@ -31,10 +31,13 @@ Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/wi
 
 ## Get it
 
-1. Download `PatchLight-win-x64.zip` from [Releases](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases) and unzip it anywhere (for example `C:\Program Files\PatchLight`). Keep the folder together.
-2. Run `PatchLight.exe`. It starts with Windows from then on and waits in the tray. You can turn that off in **Settings**.
+1. Download `PatchLight-win-x64.zip` from [Releases](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases).
+2. Unzip it to `C:\Program Files\PatchLight` (Windows asks for permission). Keep the folder together.
+3. Run `PatchLight.exe`. It starts with Windows from then on and waits in the tray. You can turn that off in **Settings**.
 
-If you move the folder later, open **Settings** and turn the daily check off and on again.
+Why Program Files? The daily check runs PatchLight with full system rights, so it only works from a folder
+that only administrators can change. Otherwise any program could swap PatchLight for something else.
+From another folder everything works except the daily check, and PatchLight tells you so.
 
 ## Command line
 

@@ -1,12 +1,16 @@
 using PatchLight.Core;
 using PatchLight.Windows;
 
-namespace PatchLight.App;
+namespace PatchLight.Windows;
+
+// Message is what went wrong when it failed, or a warning to show when it worked.
+public sealed record ActionResult(bool Succeeded, string? Message);
 
 // The app's state and actions. The window and the tray icon only display it.
 public sealed class AppController(Func<Backend> createBackend, AppStateStore stateStore)
 {
     private Backend? backend;
+    private bool checkAgain;
 
     public event Action? Changed;
     public event Action<Alert>? AlertRaised;
@@ -34,9 +38,26 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
 
     public async Task CheckAsync()
     {
-        if (IsChecking) return;
+        // A check that is already running may have read Windows Update before a change; run once more after it.
+        if (IsChecking)
+        {
+            checkAgain = true;
+            return;
+        }
         IsChecking = true;
         Changed?.Invoke();
+        do
+        {
+            checkAgain = false;
+            await CheckOnceAsync();
+        }
+        while (checkAgain);
+        IsChecking = false;
+        Changed?.Invoke();
+    }
+
+    private async Task CheckOnceAsync()
+    {
         try
         {
             var result = await Backend().Service.CheckAsync(applyAutoRelease: false, CancellationToken.None);
@@ -59,19 +80,17 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
         {
             Error = Plain(ex);
         }
-        finally
-        {
-            IsChecking = false;
-            Changed?.Invoke();
-        }
     }
 
-    // Returns a plain message when it didn't work, or null.
-    public Task<string?> PauseAsync(UpdateCard card) =>
+    public Task<ActionResult> PauseAsync(UpdateCard card) =>
         RunActionAsync(b => b.Actions.HoldAsync(card.Kb!, State.PauseDays, CancellationToken.None));
 
-    public Task<string?> ResumeAsync(UpdateCard card) =>
-        RunActionAsync(b => b.Actions.ReleaseAsync(card.Kb!, CancellationToken.None));
+    public Task<ActionResult> ResumeAsync(UpdateCard card) =>
+        RunActionAsync(async b =>
+        {
+            await b.Actions.ReleaseAsync(card.Kb!, CancellationToken.None);
+            return null;
+        });
 
     public async Task<(IReadOnlyList<HistoryItem> Items, string? Error)> HistoryAsync()
     {
@@ -91,12 +110,25 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
         set => TryBackend()?.SetStartWithWindows(value);
     }
 
-    public async Task<DailyCheckState> GetDailyCheckAsync() =>
-        TryBackend() is { } b ? await b.GetDailyCheckAsync() : DailyCheckState.Off;
+    // If Task Scheduler can't be asked, the honest answer is that the daily check isn't known to be on.
+    public async Task<DailyCheckState> GetDailyCheckAsync()
+    {
+        try
+        {
+            return TryBackend() is { } b ? await b.GetDailyCheckAsync() : DailyCheckState.Off;
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write(ex);
+            return DailyCheckState.Off;
+        }
+    }
 
-    public Task<string?> SetDailyCheckAsync(bool on) => RunActionAsync(b => on
-        ? b.Actions.EnableDailyCheckAsync(CancellationToken.None)
-        : b.Actions.DisableDailyCheckAsync(CancellationToken.None), recheck: false);
+    public Task<ActionResult> SetDailyCheckAsync(bool on) => RunActionAsync(async b =>
+    {
+        await (on ? b.Actions.EnableDailyCheckAsync(CancellationToken.None) : b.Actions.DisableDailyCheckAsync(CancellationToken.None));
+        return null;
+    }, recheck: false);
 
     public string DailyCheckLastRunText()
     {
@@ -108,18 +140,20 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
 
     public void SetPauseDays(int days) => SaveState(State with { PauseDays = Math.Clamp(days, 1, HoldPolicy.MaxDays) });
 
-    private async Task<string?> RunActionAsync(Func<Backend, Task> action, bool recheck = true)
+    // Always checks again afterwards, even on failure: the action may have got halfway.
+    private async Task<ActionResult> RunActionAsync(Func<Backend, Task<string?>> action, bool recheck = true)
     {
+        ActionResult result;
         try
         {
-            await action(Backend());
+            result = new ActionResult(true, await action(Backend()));
         }
         catch (Exception ex)
         {
-            return Plain(ex);
+            result = new ActionResult(false, Plain(ex));
         }
         if (recheck) await CheckAsync();
-        return null;
+        return result;
     }
 
     private void SaveState(AppState next)

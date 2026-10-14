@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using PatchLight.Core;
+using PatchLight.Windows;
 
 namespace PatchLight.App;
 
@@ -23,7 +24,7 @@ public partial class App : Application
         this.options = options;
         InitializeComponent();
         var stateDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight");
-        controller = new AppController(options.Demo ? Backend.Demo : Backend.Real,
+        controller = new AppController(options.Demo ? Backends.Demo : Backends.Real,
             new AppStateStore(Path.Combine(stateDir, options.Demo ? "demo-state.json" : "app-state.json")));
         UnhandledException += (_, e) =>
         {

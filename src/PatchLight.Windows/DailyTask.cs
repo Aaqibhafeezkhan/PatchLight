@@ -70,6 +70,10 @@ public static class DailyTask
 
     public static void Register(string exePath)
     {
+        if (!InstallLocation.IsAdminOnly(exePath))
+            throw new PatchLightException(
+                "The daily check runs PatchLight with full system rights, so PatchLight must be in a folder only " +
+                @"administrators can change. Move the PatchLight folder to C:\Program Files and try again.");
         var file = Path.Combine(Path.GetTempPath(), $"patchlight-task-{Guid.NewGuid():N}.xml");
         try
         {

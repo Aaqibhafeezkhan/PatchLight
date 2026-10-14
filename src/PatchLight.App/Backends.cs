@@ -3,19 +3,8 @@ using PatchLight.Windows;
 
 namespace PatchLight.App;
 
-public enum DailyCheckState { Off, On, Moved }
-
-// Everything the app talks to: the real PC, or the demo.
-public sealed class Backend
+public static class Backends
 {
-    public required PatchLightService Service { get; init; }
-    public required IElevatedActions Actions { get; init; }
-    public required Func<Task<DailyCheckState>> GetDailyCheckAsync { get; init; }
-    public required Func<bool> GetStartWithWindows { get; init; }
-    public required Action<bool> SetStartWithWindows { get; init; }
-    public string? BackgroundLogPath { get; init; }
-    public bool IsDemo { get; init; }
-
     public static Backend Real()
     {
         var exe = Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file.");

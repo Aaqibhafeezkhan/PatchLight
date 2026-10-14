@@ -56,6 +56,30 @@ public sealed class ElevatedCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Warning_is_passed_back_with_success()
+    {
+        var actions = new FakeActions { Warning = "The daily check couldn't be turned on." };
+        var code = await ElevatedCommand.Parse(WithResult(ElevatedCommand.HoldArgs("KB5127648", 7)))!
+            .RunAsync(actions, CancellationToken.None);
+
+        Assert.Equal(0, code);
+        Assert.Equal("warning:The daily check couldn't be turned on.", File.ReadAllText(resultPath));
+    }
+
+    [Theory]
+    [InlineData("", 0, null)]
+    [InlineData("warning:Careful.", 0, "Careful.")]
+    public void Reading_a_good_result(string content, int exitCode, string? warning) =>
+        Assert.Equal(warning, Elevation.ReadResult(content, exitCode));
+
+    [Theory]
+    [InlineData("KB5127648 isn't paused by PatchLight.", 2, "KB5127648 isn't paused by PatchLight.")]
+    [InlineData(null, 0, "Something went wrong.")]
+    [InlineData(null, -1, "Something went wrong.")]
+    public void Reading_a_failed_result(string? content, int exitCode, string message) =>
+        Assert.Equal(message, Assert.Throws<PatchLightException>(() => Elevation.ReadResult(content, exitCode)).Message);
+
+    [Fact]
     public async Task Plain_failure_message_is_passed_back()
     {
         var actions = new FakeActions { Failure = new PatchLightException("KB5127648 isn't paused by PatchLight.") };
@@ -81,6 +105,7 @@ public sealed class ElevatedCommandTests : IDisposable
     {
         public List<string> Calls { get; } = [];
         public Exception? Failure { get; init; }
+        public string? Warning { get; init; }
 
         private Task Record(string call)
         {
@@ -89,7 +114,12 @@ public sealed class ElevatedCommandTests : IDisposable
             return Task.CompletedTask;
         }
 
-        public Task HoldAsync(string kb, int days, CancellationToken ct) => Record($"hold {kb} {days}");
+        public async Task<string?> HoldAsync(string kb, int days, CancellationToken ct)
+        {
+            await Record($"hold {kb} {days}");
+            return Warning;
+        }
+
         public Task ReleaseAsync(string kb, CancellationToken ct) => Record($"release {kb}");
         public Task EnableDailyCheckAsync(CancellationToken ct) => Record("enable");
         public Task DisableDailyCheckAsync(CancellationToken ct) => Record("disable");

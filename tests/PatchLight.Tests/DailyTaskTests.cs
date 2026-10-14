@@ -32,6 +32,24 @@ public class DailyTaskTests
     }
 
     [Fact]
+    public void Refuses_to_run_a_program_normal_users_could_replace()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "patchlight-task-" + Guid.NewGuid());
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var exe = Path.Combine(dir, "PatchLight.exe");
+            File.WriteAllText(exe, "");
+            var ex = Assert.Throws<PatchLight.Core.PatchLightException>(() => DailyTask.Register(exe));
+            Assert.Contains(@"C:\Program Files", ex.Message);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Reads_the_command_back_from_task_xml()
     {
         Assert.Equal(@"C:\X\PatchLight.exe", DailyTask.CommandFromXml(DailyTask.BuildXml(@"C:\X\PatchLight.exe")));
