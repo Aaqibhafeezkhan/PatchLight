@@ -25,8 +25,10 @@ public static class CliApp
             if (!windows.IsWindows11 || windows.DisplayVersion is null)
                 throw new PatchLightException("PatchLight works on Windows 11 only for now.");
 
-            var service = CreateService(windows.DisplayVersion);
             var isAdmin = SystemInfo.IsAdministrator();
+            // The daily check runs as SYSTEM and trusts this folder, so lock it whenever we can.
+            if (isAdmin) DataFolder.Secure(SystemInfo.DataDirectory);
+            var service = PatchLightHost.CreateService(windows.DisplayVersion);
 
             switch (command)
             {
@@ -90,15 +92,6 @@ public static class CliApp
             console.MarkupLineInterpolated($"[red]Something went wrong. Details were saved to {log}.[/]");
             return 2;
         }
-    }
-
-    private static PatchLightService CreateService(string windowsVersion)
-    {
-        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("PatchLight/0.1 (+https://github.com/)");
-        var source = new ReleaseHealthSource(http, Path.Combine(SystemInfo.DataDirectory, "cache"), TimeProvider.System);
-        var holds = new HoldStore(Path.Combine(SystemInfo.DataDirectory, "holds.json"));
-        return new PatchLightService(new WindowsUpdateClient(), source, holds, TimeProvider.System, windowsVersion);
     }
 
     private static void RequireAdmin(bool isAdmin)
