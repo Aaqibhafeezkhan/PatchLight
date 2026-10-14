@@ -35,7 +35,8 @@ public static partial class ReleaseHealthParser
                 "Couldn't find the known issues list on Microsoft's page. The page may have changed.");
 
         var issues = new List<KnownIssue>();
-        foreach (var row in table.QuerySelectorAll("tbody tr"))
+        var rows = table.QuerySelectorAll("tbody tr");
+        foreach (var row in rows)
         {
             var cells = row.QuerySelectorAll("td");
             if (cells.Length < 4) continue;
@@ -60,14 +61,23 @@ public static partial class ReleaseHealthParser
                 Title: title,
                 Summary: summary,
                 OriginatingKb: FindKb(cells[1]),
-                OriginatingBuild: build.Success ? Version.Parse(build.Groups[1].Value) : null,
+                OriginatingBuild: build.Success && Version.TryParse(build.Groups[1].Value, out var buildNumber)
+                    ? buildNumber
+                    : null,
                 OriginatingDate: date.Success
-                    ? DateOnly.ParseExact(date.Value, "yyyy-MM-dd", CultureInfo.InvariantCulture)
+                    && DateOnly.TryParseExact(date.Value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                        DateTimeStyles.None, out var originDate)
+                    ? originDate
                     : null,
                 Status: ParseStatus(statusText),
                 ResolvedByKb: FindKb(cells[2]),
                 Url: $"{pageUrl}#{id}msgdesc"));
         }
+
+        // A table full of rows we can't read means the page layout changed; don't pretend nothing is wrong.
+        if (rows.Length > 0 && issues.Count == 0)
+            throw new ReleaseHealthFormatException(
+                "Couldn't read the known issues list on Microsoft's page. The page may have changed.");
         return issues;
     }
 

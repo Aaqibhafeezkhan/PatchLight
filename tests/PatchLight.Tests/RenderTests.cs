@@ -72,4 +72,13 @@ public class RenderTests
         Assert.Contains("Likely cause", text);
         Assert.Contains("Remote Desktop fails", text);
     }
+
+    [Fact]
+    public void Pause_message_is_honest_about_needing_admin()
+    {
+        var hold = new Hold("KB5127648", "id", Now, Now.AddDays(14), "Paused by you");
+        var text = Output(c => Render.Held(c, hold));
+        Assert.Contains("Paused KB5127648", text);
+        Assert.Contains("Run patchlight as administrator", text);
+    }
 }

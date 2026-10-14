@@ -4,12 +4,14 @@ namespace PatchLight.Cli;
 
 public static class CliArgs
 {
+    private const int MaxDays = 3650;
+
     public static int Days(string[] args, int fallback)
     {
         var i = Array.FindIndex(args, a => a.Equals("--days", StringComparison.OrdinalIgnoreCase));
         if (i < 0) return fallback;
-        if (i + 1 >= args.Length || !int.TryParse(args[i + 1], out var days) || days < 1)
-            throw new PatchLightException("--days needs a number of days, like --days 7.");
+        if (i + 1 >= args.Length || !int.TryParse(args[i + 1], out var days) || days < 1 || days > MaxDays)
+            throw new PatchLightException("--days needs a number of days between 1 and 3650, like --days 7.");
         return days;
     }
 

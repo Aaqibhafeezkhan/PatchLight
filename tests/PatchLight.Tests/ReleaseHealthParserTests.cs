@@ -102,4 +102,35 @@ public class ReleaseHealthParserTests
         Assert.Equal("KB5124010", issue.OriginatingKb);
         Assert.Equal(new DateOnly(2026, 9, 22), issue.OriginatingDate);
     }
+
+    [Fact]
+    public void Odd_dates_and_builds_become_null_instead_of_crashing()
+    {
+        var html = PageWithOneRow("OS Build 26200.99999999999<br>KB5124010<br>2026-13-45", "Mitigated");
+        var issue = ReleaseHealthParser.Parse(html, Url).Single();
+        Assert.Null(issue.OriginatingBuild);
+        Assert.Null(issue.OriginatingDate);
+    }
+
+    [Fact]
+    public void A_table_with_rows_but_nothing_readable_is_a_format_error()
+    {
+        const string html = """
+            <html><body><table>
+            <thead><tr><th>Summary</th><th>Originating update</th><th>Status</th><th>Last updated</th></tr></thead>
+            <tbody><tr><td>no bold title</td><td>a</td><td>b</td><td>c</td></tr></tbody></table></body></html>
+            """;
+        Assert.Throws<ReleaseHealthFormatException>(() => ReleaseHealthParser.Parse(html, Url));
+    }
+
+    [Fact]
+    public void A_table_with_no_rows_is_an_empty_list()
+    {
+        const string html = """
+            <html><body><table>
+            <thead><tr><th>Summary</th><th>Originating update</th><th>Status</th><th>Last updated</th></tr></thead>
+            <tbody></tbody></table></body></html>
+            """;
+        Assert.Empty(ReleaseHealthParser.Parse(html, Url));
+    }
 }

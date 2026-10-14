@@ -36,7 +36,24 @@ public sealed record UpdateVerdict(
     IReadOnlyList<KnownIssue> Issues,
     IReadOnlyList<KnownIssue> Fixes);
 
-public sealed record Hold(string Kb, string UpdateId, DateTimeOffset HeldOn, DateTimeOffset ExpiresOn, string Reason);
+// IssueIds: the open problems that justified the pause. Older holds.json files don't have it.
+public sealed record Hold(
+    string Kb,
+    string UpdateId,
+    DateTimeOffset HeldOn,
+    DateTimeOffset ExpiresOn,
+    string Reason,
+    IReadOnlyList<string>? IssueIds = null)
+{
+    public IReadOnlyList<string> IssueIds { get; init; } = IssueIds ?? [];
+
+    // Lists compare by reference by default; a hold read back from disk should equal the one saved.
+    public bool Equals(Hold? other) =>
+        other is not null && Kb == other.Kb && UpdateId == other.UpdateId && HeldOn == other.HeldOn
+        && ExpiresOn == other.ExpiresOn && Reason == other.Reason && IssueIds.SequenceEqual(other.IssueIds);
+
+    public override int GetHashCode() => HashCode.Combine(Kb, UpdateId, HeldOn, ExpiresOn, Reason);
+}
 
 public enum ReleaseReason { Fixed, Expired, Gone, Manual }
 

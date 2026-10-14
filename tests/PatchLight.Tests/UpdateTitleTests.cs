@@ -27,4 +27,8 @@ public class UpdateTitleTests
         Assert.Null(UpdateTitle.TryGetBuild(title));
         Assert.Null(UpdateTitle.TryGetKb(title));
     }
+ 
+    [Fact]
+    public void Absurd_build_numbers_are_ignored() =>
+        Assert.Null(UpdateTitle.TryGetBuild("x (26200.99999999999)"));
 }

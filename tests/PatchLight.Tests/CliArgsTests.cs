@@ -31,4 +31,17 @@ public class CliArgsTests
         var ex = Assert.Throws<PatchLightException>(() => CliArgs.Required(["hold"], 1, "hold KB5127648"));
         Assert.Contains("patchlight hold KB5127648", ex.Message);
     }
+
+    [Theory]
+    [InlineData("3651")]
+    [InlineData("99999")]
+    public void Days_rejects_absurdly_long_periods(string value)
+    {
+        var ex = Assert.Throws<PatchLightException>(() => CliArgs.Days(["history", "--days", value], 60));
+        Assert.Contains("--days 7", ex.Message);
+        Assert.Contains("3650", ex.Message);
+    }
+
+    [Fact]
+    public void Days_allows_the_maximum() => Assert.Equal(3650, CliArgs.Days(["history", "--days", "3650"], 60));
 }

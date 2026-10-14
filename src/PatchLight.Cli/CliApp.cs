@@ -75,6 +75,21 @@ public static class CliApp
         {
             return 130;
         }
+        catch (Exception ex)
+        {
+            var log = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight", "last-error.txt");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(log)!);
+                File.WriteAllText(log, ex.ToString());
+            }
+            catch (Exception)
+            {
+            }
+            console.MarkupLineInterpolated($"[red]Something went wrong. Details were saved to {log}.[/]");
+            return 2;
+        }
     }
 
     private static PatchLightService CreateService(string windowsVersion)

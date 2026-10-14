@@ -74,7 +74,7 @@ public static class Render
 
     public static void Held(IAnsiConsole console, Hold hold) =>
         console.MarkupLineInterpolated(
-            $"[green]Paused {hold.Kb}[/] until {hold.ExpiresOn.ToLocalTime():MMM d}. PatchLight resumes it as soon as Microsoft fixes it.");
+            $"[green]Paused {hold.Kb}[/] until {hold.ExpiresOn.ToLocalTime():MMM d}. Run patchlight as administrator to resume it once Microsoft fixes it; after {hold.ExpiresOn.ToLocalTime():MMM d} it resumes on the next run.");
 
     public static void Released(IAnsiConsole console, ReleasedHold released) =>
         console.MarkupLineInterpolated($"[green]Resumed {released.Hold.Kb}[/]. Windows Update will install it.");

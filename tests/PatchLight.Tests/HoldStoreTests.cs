@@ -37,4 +37,33 @@ public sealed class HoldStoreTests : IDisposable
         Assert.True(File.Exists(FilePath + ".bad"));
         Assert.False(File.Exists(FilePath));
     }
+
+    [Fact]
+    public void Old_files_without_issue_ids_still_load()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, """
+            [{"Kb":"KB5127648","UpdateId":"abc","HeldOn":"2026-10-13T12:00:00+00:00","ExpiresOn":"2026-10-27T12:00:00+00:00","Reason":"Paused by you"}]
+            """);
+
+        var hold = Assert.Single(new HoldStore(FilePath).Load());
+        Assert.Empty(hold.IssueIds);
+    }
+
+    [Fact]
+    public void Issue_ids_round_trip()
+    {
+        var now = new DateTimeOffset(2026, 10, 13, 12, 0, 0, TimeSpan.Zero);
+        var store = new HoldStore(FilePath);
+        store.Save([new Hold("KB5127648", "abc", now, now.AddDays(14), "Paused by you", ["1", "2"])]);
+        Assert.Equal(new[] { "1", "2" }, Assert.Single(store.Load()).IssueIds);
+    }
+
+    [Fact]
+    public void Null_entries_are_dropped()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(FilePath, "[null]");
+        Assert.Empty(new HoldStore(FilePath).Load());
+    }
 }

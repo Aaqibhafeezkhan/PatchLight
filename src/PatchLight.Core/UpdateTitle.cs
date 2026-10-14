@@ -14,7 +14,7 @@ public static partial class UpdateTitle
     public static Version? TryGetBuild(string title)
     {
         var match = BuildPattern().Match(title);
-        return match.Success ? Version.Parse(match.Groups[1].Value) : null;
+        return match.Success && Version.TryParse(match.Groups[1].Value, out var build) ? build : null;
     }
 
     public static string? TryGetKb(string title)

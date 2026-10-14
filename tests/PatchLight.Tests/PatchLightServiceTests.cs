@@ -206,4 +206,39 @@ public sealed class PatchLightServiceTests : IDisposable
 
         Assert.Single(Assert.Single(history).Issues);
     }
+
+    [Fact]
+    public async Task Pausing_an_update_with_no_problem_survives_a_check()
+    {
+        _updates.Pending.Add(Update());
+        var hold = await _service.HoldAsync("KB5127648", 14, "Paused by you", CancellationToken.None);
+        Assert.Empty(hold.IssueIds);
+
+        var result = await _service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+
+        Assert.Single(result.ActiveHolds);
+        Assert.Empty(result.Released);
+        Assert.Single(_updates.HideCalls);
+    }
+
+    [Fact]
+    public async Task Hold_remembers_which_problems_justified_it()
+    {
+        var hold = await HoldBadUpdate();
+        Assert.Equal(new[] { "1" }, hold.IssueIds);
+    }
+
+    [Fact]
+    public async Task Hold_that_cannot_be_saved_puts_the_update_back()
+    {
+        _updates.Pending.Add(Update());
+        Directory.CreateDirectory(Path.Combine(_dir, "holds.json"));
+
+        var ex = await Assert.ThrowsAsync<PatchLightException>(() =>
+            _service.HoldAsync("KB5127648", 14, "Paused by you", CancellationToken.None));
+
+        Assert.Contains("Couldn't save the pause", ex.Message);
+        Assert.Equal(("id-KB5127648", false), _updates.HideCalls[^1]);
+        Assert.False(_updates.Pending[0].IsHidden);
+    }
 }

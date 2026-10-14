@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.CSharp.RuntimeBinder;
 using System.Runtime.Versioning;
 using PatchLight.Core;
 
@@ -13,7 +14,7 @@ public sealed class WindowsUpdateClient : IUpdateClient
     private const int ResultSucceeded = 2;
     private const int ResultSucceededWithErrors = 3;
 
-    public Task<IReadOnlyList<PendingUpdate>> GetPendingAsync(CancellationToken ct) => Task.Run(() =>
+    public Task<IReadOnlyList<PendingUpdate>> GetPendingAsync(CancellationToken ct) => Guard(() =>
     {
         dynamic updates = NewSearcher().Search(PendingCriteria).Updates;
         var list = new List<PendingUpdate>();
@@ -25,7 +26,7 @@ public sealed class WindowsUpdateClient : IUpdateClient
         return (IReadOnlyList<PendingUpdate>)list;
     }, ct);
 
-    public Task SetHiddenAsync(string updateId, bool hidden, CancellationToken ct) => Task.Run(() =>
+    public Task SetHiddenAsync(string updateId, bool hidden, CancellationToken ct) => Guard(() =>
     {
         dynamic updates = NewSearcher().Search(PendingCriteria).Updates;
         for (var i = 0; i < (int)updates.Count; i++)
@@ -45,7 +46,7 @@ public sealed class WindowsUpdateClient : IUpdateClient
         throw new PatchLightException("That update is no longer offered by Windows Update.");
     }, ct);
 
-    public Task<IReadOnlyList<InstalledUpdate>> GetHistoryAsync(int max, CancellationToken ct) => Task.Run(() =>
+    public Task<IReadOnlyList<InstalledUpdate>> GetHistoryAsync(int max, CancellationToken ct) => Guard(() =>
     {
         dynamic searcher = NewSearcher();
         int total = searcher.GetTotalHistoryCount();
@@ -83,6 +84,22 @@ public sealed class WindowsUpdateClient : IUpdateClient
             deployed.Year > 2000 ? DateOnly.FromDateTime(deployed) : null,
             (bool)update.IsHidden);
     }
+
+    // COM and late-binding failures become one plain message instead of a stack trace.
+    private static Task<T> Guard<T>(Func<T> body, CancellationToken ct) => Task.Run(() =>
+    {
+        try
+        {
+            return body();
+        }
+        catch (Exception ex) when (ex is COMException or RuntimeBinderException)
+        {
+            throw new PatchLightException(
+                "Couldn't talk to Windows Update. Check your internet connection and that the Windows Update service is running.");
+        }
+    }, ct);
+
+    private static Task Guard(Action body, CancellationToken ct) => Guard(() => { body(); return 0; }, ct);
 
     private static dynamic NewSearcher()
     {

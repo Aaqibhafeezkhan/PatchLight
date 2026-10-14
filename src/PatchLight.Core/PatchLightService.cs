@@ -22,7 +22,7 @@ public sealed class PatchLightService(
             ReleaseReason? reason =
                 verdict is null ? ReleaseReason.Gone
                 : now >= hold.ExpiresOn ? ReleaseReason.Expired
-                : verdict.Light == Light.Green ? ReleaseReason.Fixed
+                : hold.IssueIds.Count > 0 && verdict.Light == Light.Green ? ReleaseReason.Fixed
                 : null;
 
             if (reason is null)
@@ -47,11 +47,32 @@ public sealed class PatchLightService(
         var update = (await updates.GetPendingAsync(ct)).FirstOrDefault(u => u.Kb == kb)
             ?? throw new PatchLightException($"{kb} isn't waiting to be installed on this PC, so there is nothing to pause.");
 
+        IReadOnlyList<string> issueIds;
+        try
+        {
+            var data = await issues.GetAsync(windowsVersion, ct);
+            issueIds = VerdictEngine.Judge(update, data.Issues, Today()).Issues.Select(i => i.Id).ToList();
+        }
+        catch (PatchLightException)
+        {
+            issueIds = [];
+        }
+
         await updates.SetHiddenAsync(update.UpdateId, true, ct);
 
         var now = time.GetUtcNow();
-        var hold = new Hold(kb, update.UpdateId, now, now.AddDays(Math.Clamp(days, 1, HoldPolicy.MaxDays)), reason);
-        holds.Save([.. holds.Load().Where(h => h.Kb != kb), hold]);
+        var hold = new Hold(kb, update.UpdateId, now, now.AddDays(Math.Clamp(days, 1, HoldPolicy.MaxDays)), reason, issueIds);
+        try
+        {
+            holds.Save([.. holds.Load().Where(h => h.Kb != kb), hold]);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Without a saved pause nothing would ever resume it, so put the update back.
+            try { await updates.SetHiddenAsync(update.UpdateId, false, CancellationToken.None); }
+            catch (Exception) { }
+            throw new PatchLightException("Couldn't save the pause, so the update was left as it was. Try again.");
+        }
         return hold;
     }
 

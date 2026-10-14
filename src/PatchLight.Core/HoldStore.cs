@@ -11,12 +11,22 @@ public sealed class HoldStore(string path)
         if (!File.Exists(path)) return [];
         try
         {
-            return JsonSerializer.Deserialize<List<Hold>>(File.ReadAllText(path), Json) ?? [];
+            var holds = JsonSerializer.Deserialize<List<Hold?>>(File.ReadAllText(path), Json) ?? [];
+            return holds.OfType<Hold>().ToList();
         }
         catch (JsonException)
         {
             // Keep the damaged file for inspection and start fresh.
-            File.Move(path, path + ".bad", overwrite: true);
+            try
+            {
+                File.Move(path, path + ".bad", overwrite: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
             return [];
         }
     }
