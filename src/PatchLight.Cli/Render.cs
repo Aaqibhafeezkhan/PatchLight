@@ -52,12 +52,12 @@ public static class Render
         foreach (var v in result.Verdicts.Where(v => v.Fixes.Count > 0))
             console.MarkupLineInterpolated($"[green]{v.Update.Kb} fixes {v.Fixes.Count} known problem(s).[/]");
 
-        var toPause = result.Verdicts.Where(v => v.Light == Light.Red && !v.Update.IsHidden && v.Update.Kb is not null).ToList();
+        var toPause = result.Verdicts.Where(v => v.Light == Light.Red && !v.Update.IsHidden && v.Update.PauseKey is not null).ToList();
         if (toPause.Count > 0)
         {
             console.WriteLine();
             foreach (var v in toPause)
-                console.MarkupLineInterpolated($"Tip: pause it with [bold]patchlight hold {v.Update.Kb}[/]");
+                console.MarkupLineInterpolated($"Tip: pause it with [bold]patchlight hold {v.Update.PauseKey}[/]");
             if (!isAdmin) console.MarkupLine("[grey](Pausing needs a terminal opened as administrator.)[/]");
         }
 

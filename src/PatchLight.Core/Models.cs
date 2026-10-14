@@ -24,9 +24,17 @@ public sealed record PendingUpdate(
     string Title,
     Version? Build,
     DateOnly? Released,
-    bool IsHidden)
+    bool IsHidden,
+    string? TargetVersion = null)
 {
     public bool IsOsUpdate => Build is not null;
+
+    // An optional upgrade to a new Windows version ("Windows 11, version 26H2").
+    public bool IsFeatureUpdate => TargetVersion is not null;
+
+    // What people type to pause it: the KB number, or the version for an upgrade
+    // (Windows gives upgrades the same KB as that month's security update).
+    public string? PauseKey => TargetVersion ?? Kb;
 }
 
 public sealed record InstalledUpdate(string? Kb, string Title, Version? Build, DateTimeOffset InstalledOn);

@@ -43,6 +43,27 @@ public static class VerdictEngine
         return new(update, Light.Green, safe, affecting, fixes, setAside);
     }
 
+    // An upgrade brings the newest build of that version, so every open problem on its page applies.
+    public static UpdateVerdict JudgeUpgrade(PendingUpdate update, IReadOnlyList<KnownIssue> issues, bool countBusinessIssues)
+    {
+        var name = $"Windows 11, version {update.TargetVersion}";
+        var open = issues.Where(i => i.Status != IssueStatus.Resolved).ToList();
+        var setAside = countBusinessIssues ? [] : open.Where(i => i.LikelyBusinessOnly).ToList();
+        var affecting = open.Except(setAside).ToList();
+
+        var serious = affecting.Where(i => i.Status is IssueStatus.Confirmed or IssueStatus.Investigating).ToList();
+        if (serious.Count > 0)
+            return new(update, Light.Red, Describe($"{name} has a known problem", serious, affecting.Count), affecting, [], setAside);
+        if (affecting.Count > 0)
+            return new(update, Light.Yellow, Describe($"{name} has a known problem with a workaround", affecting, affecting.Count),
+                affecting, [], setAside);
+        return new(update, Light.Green, $"No known problems in {name}.", affecting, [], setAside);
+    }
+
+    public static UpdateVerdict UpgradeUnknown(PendingUpdate update) =>
+        new(update, Light.Yellow,
+            $"Couldn't read Microsoft's known problems for Windows 11, version {update.TargetVersion}. Wait before upgrading.", [], []);
+
     // Cumulative OS updates carry every change from earlier builds on the same line,
     // so an open issue from build 26200.9550 also affects 26200.9711.
     public static bool Affects(KnownIssue issue, string? kb, Version? build)

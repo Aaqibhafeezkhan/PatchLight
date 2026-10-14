@@ -84,7 +84,7 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
     }
 
     public Task<ActionResult> PauseAsync(UpdateCard card) =>
-        RunActionAsync(b => b.Actions.HoldAsync(card.Kb!, State.PauseDays, CancellationToken.None));
+        RunActionAsync(b => b.Actions.HoldAsync(card.PauseKey!, State.PauseDays, CancellationToken.None));
 
     // Removing an update keeps it paused for the usual pause length once Windows offers it again.
     public Task<ActionResult> UninstallAsync(string kb) =>
@@ -104,7 +104,7 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
     public Task<ActionResult> ResumeAsync(UpdateCard card) =>
         RunActionAsync(async b =>
         {
-            await b.Actions.ReleaseAsync(card.Kb!, CancellationToken.None);
+            await b.Actions.ReleaseAsync(card.PauseKey!, CancellationToken.None);
             return null;
         });
 

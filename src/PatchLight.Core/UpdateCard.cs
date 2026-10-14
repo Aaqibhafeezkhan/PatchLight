@@ -13,7 +13,8 @@ public sealed record UpdateCard(
     string? PausedText,
     bool CanPause,
     bool CanResume,
-    IReadOnlyList<KnownIssue> SetAside)
+    IReadOnlyList<KnownIssue> SetAside,
+    string? PauseKey)
 {
     public static IReadOnlyList<UpdateCard> Build(CheckResult result)
     {
@@ -55,8 +56,9 @@ public sealed record UpdateCard(
             verdict.Issues,
             verdict.Fixes.Count,
             pausedText,
-            CanPause: update.Kb is not null && !update.IsHidden && verdict.Light != Light.Green,
+            CanPause: update.PauseKey is not null && !update.IsHidden && verdict.Light != Light.Green,
             CanResume: update.IsHidden && hold is not null,
-            SetAside: verdict.SetAside);
+            SetAside: verdict.SetAside,
+            PauseKey: update.PauseKey);
     }
 }

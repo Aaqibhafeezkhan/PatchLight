@@ -162,7 +162,7 @@ public sealed partial class MainWindow : Window
                 Style = card.Light == Light.Red ? Style("AccentButtonStyle") : null,
             };
             pause.Click += async (_, _) => await RunCardAction(pause, () => controller.PauseAsync(card),
-                $"Paused {card.Kb}. The daily check resumes it once Microsoft fixes it, and by " +
+                $"Paused {card.PauseKey}. The daily check resumes it once Microsoft fixes it, and by " +
                 $"{DateTime.Now.AddDays(controller.State.PauseDays):MMM d} at the latest.");
             actions.Children.Add(pause);
         }
@@ -170,7 +170,7 @@ public sealed partial class MainWindow : Window
         {
             var resume = new Button { Content = "Resume" };
             resume.Click += async (_, _) => await RunCardAction(resume, () => controller.ResumeAsync(card),
-                $"Resumed {card.Kb}. Windows Update will install it.");
+                $"Resumed {card.PauseKey}. Windows Update will install it.");
             actions.Children.Add(resume);
         }
         if (actions.Children.Count > 0) body.Children.Add(actions);
