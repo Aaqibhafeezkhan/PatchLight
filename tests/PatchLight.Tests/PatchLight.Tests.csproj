@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PatchLight.Core\PatchLight.Core.csproj" />
+    <ProjectReference Include="..\..\src\PatchLight.Windows\PatchLight.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
