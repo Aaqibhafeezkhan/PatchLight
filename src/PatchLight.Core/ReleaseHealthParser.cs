@@ -100,7 +100,7 @@ public static partial class ReleaseHealthParser
     }
 
     private static string Clean(string text) =>
-        Whitespace().Replace(text.Replace("​", ""), " ").Trim();
+        Whitespace().Replace(text.Replace("\u200B", ""), " ").Trim();
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex Whitespace();
