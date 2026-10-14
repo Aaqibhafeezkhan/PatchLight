@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PatchLight.Core/PatchLight.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PatchLight.Tests/PatchLight.Tests.csproj" />
+  </Folder>
+</Solution>
