@@ -71,9 +71,58 @@ public sealed class ReleaseHealthSourceTests : IDisposable
     [Fact]
     public async Task Server_error_falls_back_like_offline()
     {
-        await Assert.ThrowsAsync<PatchLightException>(() =>
+        await Source(new StubHandler(_ => Ok(ReleaseHealthParserTests.FixtureHtml()))).GetAsync("25H2", CancellationToken.None);
+
+        var snapshot = await Source(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))
+            .GetAsync("25H2", CancellationToken.None);
+
+        Assert.True(snapshot.FromCache);
+        Assert.Equal(11, snapshot.Issues.Count);
+    }
+
+    [Fact]
+    public async Task Server_error_with_no_saved_copy_is_a_clear_error()
+    {
+        var ex = await Assert.ThrowsAsync<PatchLightException>(() =>
             Source(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))
                 .GetAsync("25H2", CancellationToken.None));
+        Assert.Contains("Couldn't reach Microsoft", ex.Message);
+    }
+
+    [Fact]
+    public async Task Timeout_falls_back_to_the_saved_copy()
+    {
+        await Source(new StubHandler(_ => Ok(ReleaseHealthParserTests.FixtureHtml()))).GetAsync("25H2", CancellationToken.None);
+
+        var snapshot = await Source(new StubHandler(_ => throw new TaskCanceledException("timed out")))
+            .GetAsync("25H2", CancellationToken.None);
+
+        Assert.True(snapshot.FromCache);
+        Assert.Equal(11, snapshot.Issues.Count);
+    }
+
+    [Fact]
+    public async Task Cancelling_does_not_fall_back_to_the_saved_copy()
+    {
+        await Source(new StubHandler(_ => Ok(ReleaseHealthParserTests.FixtureHtml()))).GetAsync("25H2", CancellationToken.None);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Source(new StubHandler(_ => Ok(ReleaseHealthParserTests.FixtureHtml()))).GetAsync("25H2", cts.Token));
+    }
+
+    [Fact]
+    public async Task Unwritable_cache_still_returns_the_fresh_download()
+    {
+        // A directory where the cache file should go makes the save fail.
+        Directory.CreateDirectory(Path.Combine(_dir, "release-health-25h2.html"));
+
+        var snapshot = await Source(new StubHandler(_ => Ok(ReleaseHealthParserTests.FixtureHtml())))
+            .GetAsync("25H2", CancellationToken.None);
+
+        Assert.Equal(11, snapshot.Issues.Count);
+        Assert.False(snapshot.FromCache);
     }
 
     private static HttpResponseMessage Ok(string html) => new(HttpStatusCode.OK) { Content = new StringContent(html) };
@@ -84,6 +133,7 @@ public sealed class ReleaseHealthSourceTests : IDisposable
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
             LastUri = request.RequestUri;
             return Task.FromResult(respond(request));
         }
