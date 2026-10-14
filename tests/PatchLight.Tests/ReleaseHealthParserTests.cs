@@ -65,4 +65,41 @@ public class ReleaseHealthParserTests
     [InlineData("Something new", IssueStatus.Unknown)]
     public void Maps_status_text(string text, IssueStatus expected) =>
         Assert.Equal(expected, ReleaseHealthParser.ParseStatus(text));
+
+    private static string PageWithOneRow(string originCell, string statusCell) => $"""
+        <html><body><table>
+        <thead><tr><th>Summary</th><th>Originating update</th><th>Status</th><th>Last updated</th></tr></thead>
+        <tbody><tr>
+        <td><div id="9999msg"></div><b>Synthetic issue</b>Synthetic summary</td>
+        <td>{originCell}</td><td>{statusCell}</td><td>2026-10-13</td>
+        </tr></tbody></table></body></html>
+        """;
+
+    [Fact]
+    public void Reads_a_resolving_KB_written_as_plain_text_without_a_link()
+    {
+        var html = PageWithOneRow("OS Build 26200.9550<br><a href=\"x\">KB5124010</a><br>2026-09-22",
+            "Resolved KB5127648");
+        var issue = ReleaseHealthParser.Parse(html, Url).Single();
+        Assert.Equal(IssueStatus.Resolved, issue.Status);
+        Assert.Equal("KB5127648", issue.ResolvedByKb);
+    }
+
+    [Fact]
+    public void Reads_an_originating_KB_written_as_plain_text_before_a_date()
+    {
+        var html = PageWithOneRow("OS Build 26200.9550<br>KB5124010<br>2026-09-22", "Mitigated");
+        var issue = ReleaseHealthParser.Parse(html, Url).Single();
+        Assert.Equal("KB5124010", issue.OriginatingKb);
+        Assert.Equal(new DateOnly(2026, 9, 22), issue.OriginatingDate);
+    }
+
+    [Fact]
+    public void Reads_a_7_digit_originating_KB_glued_directly_onto_a_date()
+    {
+        var html = PageWithOneRow("OS Build 26200.9550<br>KB51240102026-09-22", "Mitigated");
+        var issue = ReleaseHealthParser.Parse(html, Url).Single();
+        Assert.Equal("KB5124010", issue.OriginatingKb);
+        Assert.Equal(new DateOnly(2026, 9, 22), issue.OriginatingDate);
+    }
 }

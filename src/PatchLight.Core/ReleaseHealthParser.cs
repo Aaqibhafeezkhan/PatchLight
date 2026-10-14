@@ -8,9 +8,12 @@ namespace PatchLight.Core;
 // Reads the summary table at the top of a Windows release health page.
 public static partial class ReleaseHealthParser
 {
-    // Matched against each link's text on its own: a cell's flattened text runs KB and the date together.
-    [GeneratedRegex(@"^KB\d{6,8}$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"KB\d{6,8}(?!\d)", RegexOptions.IgnoreCase)]
     private static partial Regex KbPattern();
+
+    // Fallback for a 7-digit KB glued straight onto a date with no separator in the HTML.
+    [GeneratedRegex(@"KB(\d{7})(?=\d{4}-\d{2}-\d{2})", RegexOptions.IgnoreCase)]
+    private static partial Regex GluedKbPattern();
 
     [GeneratedRegex(@"OS Build (\d{5}\.\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex BuildPattern();
@@ -79,11 +82,16 @@ public static partial class ReleaseHealthParser
         return IssueStatus.Unknown;
     }
 
-    private static string? FindKb(IElement cell) =>
-        cell.QuerySelectorAll("a")
-            .Select(link => link.TextContent.Trim())
-            .FirstOrDefault(text => KbPattern().IsMatch(text))
-            ?.ToUpperInvariant();
+    // Child nodes are joined with spaces, so a <br> between a KB and a date doesn't run them together.
+    private static string? FindKb(IElement cell)
+    {
+        var text = string.Join(" ", cell.ChildNodes.Select(node => node.TextContent));
+        var kb = KbPattern().Match(text);
+        if (kb.Success) return kb.Value.ToUpperInvariant();
+
+        var glued = GluedKbPattern().Match(text);
+        return glued.Success ? "KB" + glued.Groups[1].Value : null;
+    }
 
     private static bool IsSummaryTable(IElement table)
     {
