@@ -1,0 +1,106 @@
+namespace PatchLight.Core;
+
+public sealed class PatchLightService(
+    IUpdateClient updates,
+    IIssueSource issues,
+    HoldStore holds,
+    TimeProvider time,
+    string windowsVersion)
+{
+    public async Task<CheckResult> CheckAsync(bool applyAutoRelease, CancellationToken ct)
+    {
+        var data = await issues.GetAsync(windowsVersion, ct);
+        var pending = await updates.GetPendingAsync(ct);
+        var now = time.GetUtcNow();
+        var verdicts = pending.Select(u => VerdictEngine.Judge(u, data.Issues, Today())).ToList();
+
+        var active = new List<Hold>();
+        var released = new List<ReleasedHold>();
+        foreach (var hold in holds.Load())
+        {
+            var verdict = verdicts.FirstOrDefault(v => v.Update.UpdateId == hold.UpdateId);
+            ReleaseReason? reason =
+                verdict is null ? ReleaseReason.Gone
+                : now >= hold.ExpiresOn ? ReleaseReason.Expired
+                : verdict.Light == Light.Green ? ReleaseReason.Fixed
+                : null;
+
+            if (reason is null)
+            {
+                active.Add(hold);
+                continue;
+            }
+            if (applyAutoRelease && verdict is not null)
+                await updates.SetHiddenAsync(hold.UpdateId, false, ct);
+            released.Add(new ReleasedHold(hold, reason.Value));
+        }
+
+        if (applyAutoRelease && released.Count > 0)
+            holds.Save(active);
+
+        return new CheckResult(verdicts, active, released, applyAutoRelease, data, now);
+    }
+
+    public async Task<Hold> HoldAsync(string kbText, int days, string reason, CancellationToken ct)
+    {
+        var kb = RequireKb(kbText);
+        var update = (await updates.GetPendingAsync(ct)).FirstOrDefault(u => u.Kb == kb)
+            ?? throw new PatchLightException($"{kb} isn't waiting to be installed on this PC, so there is nothing to pause.");
+
+        await updates.SetHiddenAsync(update.UpdateId, true, ct);
+
+        var now = time.GetUtcNow();
+        var hold = new Hold(kb, update.UpdateId, now, now.AddDays(Math.Clamp(days, 1, HoldPolicy.MaxDays)), reason);
+        holds.Save([.. holds.Load().Where(h => h.Kb != kb), hold]);
+        return hold;
+    }
+
+    public async Task<ReleasedHold> ReleaseAsync(string kbText, CancellationToken ct)
+    {
+        var kb = RequireKb(kbText);
+        var all = holds.Load();
+        var hold = all.FirstOrDefault(h => h.Kb == kb)
+            ?? throw new PatchLightException($"{kb} isn't paused by PatchLight.");
+
+        if ((await updates.GetPendingAsync(ct)).Any(u => u.UpdateId == hold.UpdateId))
+            await updates.SetHiddenAsync(hold.UpdateId, false, ct);
+
+        holds.Save([.. all.Where(h => h.Kb != kb)]);
+        return new ReleasedHold(hold, ReleaseReason.Manual);
+    }
+
+    public async Task<IReadOnlyList<HistoryItem>> HistoryAsync(int days, CancellationToken ct)
+    {
+        var data = await issues.GetAsync(windowsVersion, ct);
+        var cutoff = time.GetUtcNow().AddDays(-days);
+        var installed = (await updates.GetHistoryAsync(500, ct))
+            .Where(u => u.Kb is not null && u.InstalledOn >= cutoff)
+            .GroupBy(u => u.Kb)
+            .Select(g => g.MaxBy(u => u.InstalledOn)!)
+            .OrderBy(u => u.InstalledOn)
+            .ToList();
+
+        // Blame the update that brought each open problem: the exact KB if installed,
+        // otherwise the first later update on the same build line.
+        var blame = new Dictionary<string, List<KnownIssue>>();
+        foreach (var issue in data.Issues.Where(i => i.Status != IssueStatus.Resolved))
+        {
+            var culprit = installed.FirstOrDefault(u => u.Kb == issue.OriginatingKb)
+                ?? installed.FirstOrDefault(u => VerdictEngine.Affects(issue, kb: null, u.Build));
+            if (culprit is null) continue;
+            if (!blame.TryGetValue(culprit.Kb!, out var list)) blame[culprit.Kb!] = list = [];
+            list.Add(issue);
+        }
+
+        return installed
+            .OrderByDescending(u => u.InstalledOn)
+            .Select(u => new HistoryItem(u, blame.GetValueOrDefault(u.Kb!) ?? []))
+            .ToList();
+    }
+
+    private DateOnly Today() => DateOnly.FromDateTime(time.GetLocalNow().DateTime);
+
+    private static string RequireKb(string text) =>
+        KbNumber.Normalize(text)
+        ?? throw new PatchLightException($"'{text}' isn't an update number. Use one like KB5127648.");
+}
