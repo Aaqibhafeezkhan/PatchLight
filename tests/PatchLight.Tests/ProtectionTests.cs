@@ -148,6 +148,16 @@ public sealed class ProtectionTests : IDisposable
     }
 
     [Fact]
+    public async Task Waiting_update_resumed_by_hand_is_not_paused_again()
+    {
+        updates.Pending.Add(Update(released: new DateOnly(2026, 10, 11)));
+        var resumed = new ProtectionSettings(WaitDays: 7, LetThrough: [new LetThrough("KB5127648", [])]);
+
+        Assert.Empty((await Protect(resumed, waitWithHolds: true)).Paused);
+        Assert.Empty(updates.HideCalls);
+    }
+
+    [Fact]
     public async Task Only_young_os_updates_wait()
     {
         updates.Pending.Add(Update(released: new DateOnly(2026, 10, 1)));

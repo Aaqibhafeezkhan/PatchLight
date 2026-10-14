@@ -212,7 +212,9 @@ public sealed class PatchLightService(
                 }
             }
 
+            // An update the person let through doesn't wait again.
             if (waitWithHolds && settings.WaitDays > 0 && update.IsOsUpdate && !update.IsFeatureUpdate
+                && !letThrough.Any(l => l.Kb == key)
                 && update.Released is { } released && today < released.AddDays(settings.WaitDays))
             {
                 var until = new DateTimeOffset(released.AddDays(settings.WaitDays).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
