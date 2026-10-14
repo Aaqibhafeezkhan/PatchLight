@@ -13,7 +13,10 @@
     <!-- Unpackaged and self-contained: runs from any folder, nothing else to install. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Needed so the XAML resources (PatchLight.pri, *.xbf) are published for an unpackaged app. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
     <SelfContained>true</SelfContained>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Platforms>x64</Platforms>
     <!-- Program.cs handles the headless modes before any window starts. -->
@@ -22,6 +25,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <!-- PatchLight doesn't use the AI, machine learning, search or widget parts (~100 MB). -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.AI" Version="2.5.5" ExcludeAssets="all" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.ML" Version="2.1.94" ExcludeAssets="all" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Search" Version="2.5.5" ExcludeAssets="all" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Widgets" Version="2.0.5" ExcludeAssets="all" />
     <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
   </ItemGroup>
 
@@ -33,5 +41,10 @@
     <ProjectReference Include="..\PatchLight.Core\PatchLight.Core.csproj" />
     <ProjectReference Include="..\PatchLight.Windows\PatchLight.Windows.csproj" />
   </ItemGroup>
+
+  <!-- The Windows App SDK runtime ships its machine-learning engine with every self-contained app. PatchLight never loads it. -->
+  <Target Name="DropUnusedMachineLearning" AfterTargets="Publish">
+    <Delete Files="$(PublishDir)onnxruntime.dll;$(PublishDir)DirectML.dll;$(PublishDir)Microsoft.ML.OnnxRuntime.dll;$(PublishDir)Microsoft.Windows.AI.MachineLearning.dll;$(PublishDir)Microsoft.Windows.AI.MachineLearning.Projection.dll" />
+  </Target>
 
 </Project>
