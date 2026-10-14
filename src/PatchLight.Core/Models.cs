@@ -14,7 +14,9 @@ public sealed record KnownIssue(
     DateOnly? OriginatingDate,
     IssueStatus Status,
     string? ResolvedByKb,
-    string Url);
+    string Url,
+    string Description = "",
+    bool LikelyBusinessOnly = false);
 
 public sealed record PendingUpdate(
     string UpdateId,

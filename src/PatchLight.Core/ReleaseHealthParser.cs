@@ -55,6 +55,7 @@ public static partial class ReleaseHealthParser
             var date = DatePattern().Match(origin);
 
             var statusText = cells[2].TextContent.Trim();
+            var description = Description(document, id);
 
             issues.Add(new KnownIssue(
                 Id: id,
@@ -71,7 +72,9 @@ public static partial class ReleaseHealthParser
                     : null,
                 Status: ParseStatus(statusText),
                 ResolvedByKb: FindKb(cells[2]),
-                Url: $"{pageUrl}#{id}msgdesc"));
+                Url: $"{pageUrl}#{id}msgdesc",
+                Description: description,
+                LikelyBusinessOnly: BusinessSignals.IsLikelyBusinessOnly(title, summary, description)));
         }
 
         // A table full of rows we can't read means the page layout changed; don't pretend nothing is wrong.
@@ -80,6 +83,27 @@ public static partial class ReleaseHealthParser
                 "Couldn't read the known issues list on Microsoft's page. The page may have changed.");
         return issues;
     }
+
+    // The "Issue details" section below the table: an empty <div id="NNNNmsgdesc">, then a heading, a
+    // status table and the paragraphs. The description is the first paragraph that isn't an "Updated" note.
+    private static string Description(IDocument document, string id)
+    {
+        var anchor = document.GetElementById($"{id}msgdesc");
+        for (var node = anchor?.NextElementSibling; node is not null; node = node.NextElementSibling)
+        {
+            if (node.Id?.EndsWith("msgdesc", StringComparison.Ordinal) == true || node.LocalName is "h2" or "h3") break;
+            if (node.LocalName != "p") continue;
+            var text = Clean(node.TextContent);
+            if (text.Length > 0 && !text.StartsWith("Updated", StringComparison.OrdinalIgnoreCase)) return text;
+        }
+        return "";
+    }
+
+    private static string Clean(string text) =>
+        Whitespace().Replace(text.Replace("​", ""), " ").Trim();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex Whitespace();
 
     public static IssueStatus ParseStatus(string text)
     {
