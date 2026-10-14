@@ -67,7 +67,7 @@ public static class Render
 
         console.WriteLine();
         if (result.Data.FromCache)
-            console.MarkupLineInterpolated($"[yellow]Couldn't reach Microsoft. Using the copy saved {Ago(result.CheckedAt - result.Data.FetchedAt)}.[/]");
+            console.MarkupLineInterpolated($"[yellow]Couldn't reach Microsoft. Using the copy saved {StatusSummary.Ago(result.CheckedAt - result.Data.FetchedAt)}.[/]");
         else
             console.MarkupLine("[grey]Checked against Microsoft's known issues just now.[/]");
     }
@@ -116,9 +116,4 @@ public static class Render
         ReleaseReason.Gone => "Windows replaced it with a newer update",
         _ => "resumed by you",
     };
-
-    private static string Ago(TimeSpan age) =>
-        age.TotalHours < 1 ? "less than an hour ago"
-        : age.TotalHours < 48 ? $"{(int)age.TotalHours} hours ago"
-        : $"{(int)age.TotalDays} days ago";
 }
