@@ -179,6 +179,15 @@ public sealed class AppControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Protection_uses_the_pause_length()
+    {
+        controller.SetPauseDays(21);
+        var result = await controller.SetProtectionAsync(true, 7);
+        Assert.True(result.Succeeded);
+        Assert.Equal(new ProtectionChoice(true, 7, 21), actions.LastProtection);
+    }
+
+    [Fact]
     public async Task Turning_news_off_stops_using_it()
     {
         await controller.CheckAsync();

@@ -3,15 +3,19 @@ using PatchLight.Core;
 
 namespace PatchLight.Windows;
 
-// Paused: updates the protection settings paused on their own. Older logs don't have it.
+// Resumed/Paused: what this run did (Paused: started by the protection settings). Events: every run of the
+// last week that did something, this one included, so the app hears about runs it missed. Older logs have neither.
 public sealed record BackgroundCheckLog(DateTimeOffset RanAt, IReadOnlyList<string> Resumed, string? Error,
-    IReadOnlyList<string>? Paused = null)
+    IReadOnlyList<string>? Paused = null, IReadOnlyList<BackgroundEvent>? Events = null)
 {
+    public static readonly TimeSpan KeepEvents = TimeSpan.FromDays(7);
+
     public IReadOnlyList<string> Paused { get; init; } = Paused ?? [];
+    public IReadOnlyList<BackgroundEvent> Events { get; init; } = Events ?? [];
 
     public bool Equals(BackgroundCheckLog? other) =>
         other is not null && RanAt == other.RanAt && Error == other.Error && Resumed.SequenceEqual(other.Resumed)
-        && Paused.SequenceEqual(other.Paused);
+        && Paused.SequenceEqual(other.Paused) && Events.SequenceEqual(other.Events);
 
     public override int GetHashCode() => HashCode.Combine(RanAt, Error);
 }
@@ -63,6 +67,11 @@ public static class BackgroundCheck
             }
             log = new BackgroundCheckLog(time.GetUtcNow(), ended, message);
         }
+
+        var cutoff = log.RanAt - BackgroundCheckLog.KeepEvents;
+        var events = (ReadLog(logPath)?.Events ?? []).Where(e => e.At > cutoff).ToList();
+        if (log.Resumed.Count > 0 || log.Paused.Count > 0) events.Add(new BackgroundEvent(log.RanAt, log.Resumed, log.Paused));
+        log = log with { Events = events };
 
         try
         {

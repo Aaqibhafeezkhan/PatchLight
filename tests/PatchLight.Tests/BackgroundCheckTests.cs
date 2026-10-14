@@ -111,6 +111,29 @@ public sealed class BackgroundCheckTests : IDisposable
     }
 
     [Fact]
+    public async Task What_each_run_did_is_kept_for_a_week()
+    {
+        var holds = new HoldStore(Path.Combine(dir, "holds.json"));
+        var settings = new ProtectionStore(Path.Combine(dir, "settings.json"));
+        settings.Save(new ProtectionSettings(AutoPauseRed: true));
+        var issues = new FakeIssueSource(time);
+        issues.Issues.Add(Issue(IssueStatus.Confirmed));
+
+        updates.Pending.Add(Update());
+        await BackgroundCheck.RunAsync(Service(issues, holds), LogPath, time, CancellationToken.None, settings);
+        time.Advance(TimeSpan.FromHours(1));
+        var quiet = await BackgroundCheck.RunAsync(Service(issues, holds), LogPath, time, CancellationToken.None, settings);
+
+        Assert.Empty(quiet.Paused);
+        var kept = Assert.Single(quiet.Events);
+        Assert.Equal(["KB5127648"], kept.Paused);
+        Assert.Equal(time.GetUtcNow().AddHours(-1), kept.At);
+
+        time.Advance(TimeSpan.FromDays(8));
+        Assert.Empty((await BackgroundCheck.RunAsync(Service(issues, holds), LogPath, time, CancellationToken.None, settings)).Events);
+    }
+
+    [Fact]
     public async Task Pause_that_ran_out_is_remembered_as_let_through()
     {
         var holds = new HoldStore(Path.Combine(dir, "holds.json"));

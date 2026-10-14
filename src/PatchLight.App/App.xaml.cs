@@ -11,7 +11,8 @@ namespace PatchLight.App;
 
 public partial class App : Application
 {
-    private static readonly TimeSpan CheckEvery = TimeSpan.FromHours(6);
+    // Same pace as the automatic check, so what it did reaches the person within the hour.
+    private static readonly TimeSpan CheckEvery = TimeSpan.FromHours(1);
 
     private readonly AppOptions options;
     private readonly AppController controller;

@@ -57,7 +57,7 @@ public class AlertPlannerTests
 
         var alert = Assert.Single(alerts);
         Assert.Equal("Microsoft fixed KB5127648", alert.Title);
-        Assert.Equal("Open PatchLight and press Resume. If the daily check is on, it does this for you.", alert.Body);
+        Assert.Equal("Open PatchLight and press Resume. If the automatic check is on, it does this for you.", alert.Body);
         Assert.Empty(AlertPlanner.Plan(next, result).Alerts);
     }
 
@@ -90,28 +90,56 @@ public class BackgroundAlertTests
 {
     private static readonly DateTimeOffset Ran = new(2026, 10, 14, 10, 0, 0, TimeSpan.Zero);
 
+    private static BackgroundEvent Event(int hoursAfter, IReadOnlyList<string>? resumed = null, IReadOnlyList<string>? paused = null) =>
+        new(Ran.AddHours(hoursAfter), resumed ?? [], paused ?? []);
+
     [Fact]
-    public void Updates_resumed_by_the_daily_check_alert_once()
+    public void Updates_resumed_by_the_automatic_check_alert_once()
     {
-        var (alert, next) = AlertPlanner.PlanBackground(new AppState(), Ran, ["KB5127648"]);
-        Assert.Equal("PatchLight resumed KB5127648", alert!.Title);
+        var (alerts, next) = AlertPlanner.PlanBackground(new AppState(), Ran, [Event(0, resumed: ["KB5127648"])]);
+        var alert = Assert.Single(alerts);
+        Assert.Equal("PatchLight resumed KB5127648", alert.Title);
         Assert.Equal("Microsoft fixed it or the pause ended. Windows Update will install it.", alert.Body);
         Assert.Equal(Ran, next.SeenBackgroundRun);
-        Assert.Null(AlertPlanner.PlanBackground(next, Ran, ["KB5127648"]).Alert);
+        Assert.Empty(AlertPlanner.PlanBackground(next, Ran, [Event(0, resumed: ["KB5127648"])]).Alerts);
     }
 
     [Fact]
     public void Several_resumed_updates_make_one_alert()
     {
-        var (alert, _) = AlertPlanner.PlanBackground(new AppState(), Ran, ["KB1000001", "KB1000002"]);
-        Assert.Equal("PatchLight resumed 2 updates", alert!.Title);
+        var (alerts, _) = AlertPlanner.PlanBackground(new AppState(), Ran, [Event(0, resumed: ["KB1000001", "KB1000002"])]);
+        Assert.Equal("PatchLight resumed 2 updates", Assert.Single(alerts).Title);
     }
 
     [Fact]
-    public void Run_that_resumed_nothing_is_quiet_but_remembered()
+    public void Run_that_did_nothing_is_quiet_but_remembered()
     {
-        var (alert, next) = AlertPlanner.PlanBackground(new AppState(), Ran, []);
-        Assert.Null(alert);
+        var (alerts, next) = AlertPlanner.PlanBackground(new AppState(), Ran, []);
+        Assert.Empty(alerts);
         Assert.Equal(Ran, next.SeenBackgroundRun);
+    }
+
+    [Fact]
+    public void Automatic_pause_alerts()
+    {
+        var (alerts, _) = AlertPlanner.PlanBackground(new AppState(), Ran, [Event(0, paused: ["KB5127648"])]);
+        var alert = Assert.Single(alerts);
+        Assert.Equal("PatchLight paused KB5127648 automatically", alert.Title);
+        Assert.Equal("It has known problems or is too new. PatchLight resumes it once it's safe.", alert.Body);
+
+        var (several, _) = AlertPlanner.PlanBackground(new AppState(), Ran, [Event(0, paused: ["KB1", "KB2"])]);
+        Assert.Equal("PatchLight paused 2 updates automatically", Assert.Single(several).Title);
+    }
+
+    [Fact]
+    public void Everything_since_the_last_look_is_told_once()
+    {
+        var seen = new AppState(SeenBackgroundRun: Ran);
+        var events = new[] { Event(0, paused: ["KB0"]), Event(1, paused: ["KB5127648"]), Event(2, resumed: ["KB5127001"]) };
+
+        var (alerts, next) = AlertPlanner.PlanBackground(seen, Ran.AddHours(3), events);
+
+        Assert.Equal(["PatchLight paused KB5127648 automatically", "PatchLight resumed KB5127001"], alerts.Select(a => a.Title));
+        Assert.Equal(Ran.AddHours(3), next.SeenBackgroundRun);
     }
 }

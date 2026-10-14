@@ -18,4 +18,13 @@ public sealed class Backend
 
     // Tech-news reports; the app turns them off when the person does.
     public INewsSource? NewsSource { get; init; }
+
+    // The protection settings as the automatic check sees them.
+    public Func<ProtectionSettings> GetProtection { get; init; } = () => new();
+
+    // Home can't use Windows' own deferral, so the wait is done with pauses there.
+    public bool IsHomeEdition { get; init; }
+
+    // A company (or something other than PatchLight) already set Windows' deferral policy.
+    public Func<bool> DeferManagedElsewhere { get; init; } = () => false;
 }

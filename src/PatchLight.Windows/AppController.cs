@@ -70,9 +70,13 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
             var all = alerts.ToList();
             if (Backend().BackgroundLogPath is { } logPath && BackgroundCheck.ReadLog(logPath) is { } log)
             {
-                var (backgroundAlert, afterBackground) = AlertPlanner.PlanBackground(next, log.RanAt, log.Resumed);
+                // Logs from older versions have no events; their own run is the only one known.
+                var events = log.Events.Count > 0 || (log.Resumed.Count == 0 && log.Paused.Count == 0)
+                    ? log.Events
+                    : [new BackgroundEvent(log.RanAt, log.Resumed, log.Paused)];
+                var (backgroundAlerts, afterBackground) = AlertPlanner.PlanBackground(next, log.RanAt, events);
                 next = afterBackground;
-                if (backgroundAlert is not null) all.Add(backgroundAlert);
+                all.AddRange(backgroundAlerts);
             }
             SaveState(next);
             foreach (var alert in all) AlertRaised?.Invoke(alert);
@@ -160,6 +164,15 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
         if (log.Error is not null) return $"{when}: {log.Error}";
         return log.Resumed.Count == 0 ? $"{when}." : $"{when} and resumed {string.Join(", ", log.Resumed)}.";
     }
+
+    public ProtectionSettings Protection => TryBackend()?.GetProtection() ?? new();
+    public bool IsHomeEdition => TryBackend()?.IsHomeEdition ?? false;
+    public bool DeferManagedElsewhere => TryBackend()?.DeferManagedElsewhere() ?? false;
+
+    // Automatic pauses last as long as the person's own pauses.
+    public Task<ActionResult> SetProtectionAsync(bool autoPauseRed, int waitDays) =>
+        RunActionAsync(b => b.Actions.SetProtectionAsync(new ProtectionChoice(autoPauseRed, waitDays, State.PauseDays), CancellationToken.None),
+            recheck: false);
 
     public void SetPauseDays(int days) => SaveState(State with { PauseDays = Math.Clamp(days, 1, HoldPolicy.MaxDays) });
 

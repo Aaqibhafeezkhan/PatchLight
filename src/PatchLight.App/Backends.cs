@@ -28,6 +28,10 @@ public static class Backends
             },
             BackgroundLogPath = PatchLightHost.BackgroundLogPath(SystemInfo.DataDirectory),
             NewsSource = PatchLightHost.CreateNewsSource(),
+            GetProtection = () => PatchLightHost.CreateProtectionStore().Load(),
+            IsHomeEdition = SystemInfo.IsHomeEdition(),
+            DeferManagedElsewhere = () => !SystemInfo.IsHomeEdition() && DeferPolicy.IsManagedElsewhere(
+                new WindowsUpdatePolicyValues(), PatchLightHost.CreateProtectionStore().Load().OwnsDeferPolicy),
         };
     }
 
@@ -44,6 +48,7 @@ public static class Backends
             SetStartWithWindows = on => startWithWindows = on,
             NewsSource = DemoData.News,
             IsDemo = true,
+            GetProtection = () => actions.Protection,
         };
     }
 }

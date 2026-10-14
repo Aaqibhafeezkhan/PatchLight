@@ -180,7 +180,7 @@ public sealed partial class MainWindow : Window
                 Style = card.Light == Light.Red ? Style("AccentButtonStyle") : null,
             };
             pause.Click += async (_, _) => await RunCardAction(pause, () => controller.PauseAsync(card),
-                $"Paused {card.PauseKey}. The daily check resumes it once Microsoft fixes it, and by " +
+                $"Paused {card.PauseKey}. The automatic check resumes it once Microsoft fixes it, and by " +
                 $"{DateTime.Now.AddDays(controller.State.PauseDays):MMM d} at the latest.");
             actions.Children.Add(pause);
         }
@@ -364,16 +364,27 @@ public sealed partial class MainWindow : Window
         var startWithWindows = new ToggleSwitch { Header = "Start with Windows", IsOn = controller.StartWithWindows };
         startWithWindows.Toggled += (_, _) => controller.StartWithWindows = startWithWindows.IsOn;
         PageContent.Children.Add(Card(Section(startWithWindows,
-            "PatchLight waits quietly in the tray, checks every few hours and tells you when an update has known problems.")));
+            "PatchLight waits quietly in the tray, checks every hour and tells you when an update has known problems.")));
 
-        var daily = new ToggleSwitch { Header = "Daily automatic check", IsEnabled = false };
+        var daily = new ToggleSwitch { Header = "Automatic check (every hour)", IsEnabled = false };
         var dailyText = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Secondary() };
         var dailyPanel = Section(daily,
-            "Once a day, even when PatchLight is closed, Windows runs a quick check that resumes paused updates " +
-            "Microsoft has fixed and ends pauses that ran out. Pausing an update turns it on. " +
-            "Turning it on or off here asks for administrator permission.");
+            "Every hour, even when PatchLight is closed, Windows runs a quick check that resumes paused updates " +
+            "Microsoft has fixed, ends pauses that ran out and applies your protection settings. Pausing an update " +
+            "turns it on. Turning it on or off here asks for administrator permission.");
         dailyPanel.Children.Add(dailyText);
         PageContent.Children.Add(Card(dailyPanel));
+
+        var protectionCard = ProtectionCard(async () =>
+        {
+            var now = await controller.GetDailyCheckAsync();
+            if (version != settingsVersion) return;
+            dailyShowingState = true;
+            daily.IsOn = now == DailyCheckState.On;
+            dailyShowingState = false;
+            dailyText.Text = DailyText(now);
+        });
+        PageContent.Children.Add(protectionCard);
 
         var business = new ToggleSwitch { Header = "Count problems that usually only affect business PCs", IsOn = controller.CountBusinessIssues };
         business.Toggled += async (_, _) => await controller.SetCountBusinessIssuesAsync(business.IsOn);
@@ -418,20 +429,95 @@ public sealed partial class MainWindow : Window
         dailyText.Text = DailyText(state);
         daily.IsEnabled = true;
 
-        var showingState = false;
         daily.Toggled += async (_, _) =>
         {
-            if (showingState) return;
+            if (dailyShowingState) return;
             daily.IsEnabled = false;
             var result = await controller.SetDailyCheckAsync(daily.IsOn);
             var now = await controller.GetDailyCheckAsync();
-            showingState = true;
+            dailyShowingState = true;
             daily.IsOn = now == DailyCheckState.On;
-            showingState = false;
+            dailyShowingState = false;
             dailyText.Text = DailyText(now);
             daily.IsEnabled = true;
             if (!result.Succeeded) Show(InfoBarSeverity.Warning, result.Message!);
         };
+    }
+
+    // Set while the page shows a state it read back, so the toggle doesn't act on its own change.
+    private bool dailyShowingState;
+
+    private static readonly int[] WaitChoices = ProtectionSettings.WaitChoices;
+
+    // Auto-pause and the wait setting. Each change asks for administrator permission once, and turns on the
+    // automatic check that does the work. onChanged refreshes the automatic check's switch.
+    private Border ProtectionCard(Func<Task> onChanged)
+    {
+        var settings = controller.Protection;
+        var panel = new StackPanel { Spacing = 6 };
+        panel.Children.Add(new TextBlock { Text = "Protection", Style = Style("BodyStrongTextBlockStyle") });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Once Windows has an update ready for your next restart, it installs it no matter how you shut down. " +
+                "These act before that happens. Changing them asks for administrator permission and turns on the automatic check.",
+            TextWrapping = TextWrapping.Wrap, Foreground = Secondary(),
+        });
+
+        var autoPause = new ToggleSwitch { Header = "Pause red updates automatically", IsOn = settings.AutoPauseRed };
+        panel.Children.Add(autoPause);
+        panel.Children.Add(new TextBlock
+        {
+            Text = "The hourly check pauses updates with confirmed problems, for as long as your pause length. They resume " +
+                "when Microsoft fixes them. Updates in yellow and news reports are never paused on their own, and an update " +
+                "you resume yourself stays resumed unless a new problem shows up.",
+            TextWrapping = TextWrapping.Wrap, Foreground = Secondary(),
+        });
+
+        var wait = new ComboBox { Header = "Wait before installing new updates", Width = 220, Margin = new Thickness(0, 8, 0, 0) };
+        foreach (var days in WaitChoices) wait.Items.Add(days == 0 ? "Off" : $"{days} days");
+        wait.SelectedIndex = Math.Max(0, Array.IndexOf(WaitChoices, settings.WaitDays));
+        panel.Children.Add(wait);
+        var waitText = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Secondary() };
+        panel.Children.Add(waitText);
+
+        var managed = controller.DeferManagedElsewhere;
+        if (managed)
+        {
+            wait.IsEnabled = false;
+            waitText.Text = "Managed by your organization on this PC, so PatchLight leaves it alone.";
+        }
+        else
+        {
+            waitText.Text = "New monthly Windows updates almost never have known problems on their first day; they show up " +
+                "days later. Waiting gives them time to appear. Security updates still arrive, just later. " +
+                (controller.IsHomeEdition
+                    ? "On Windows Home, PatchLight pauses new updates until they're old enough. This works best when the PC " +
+                      "is on and online, because Windows might get an update ready first."
+                    : "PatchLight uses Windows' own setting for this, so Windows Update will say some settings are managed " +
+                      "by your organization. That's PatchLight.");
+        }
+
+        var applying = false;
+        async Task ApplyAsync()
+        {
+            if (applying) return;
+            applying = true;
+            autoPause.IsEnabled = wait.IsEnabled = false;
+            var result = await controller.SetProtectionAsync(autoPause.IsOn, WaitChoices[Math.Max(0, wait.SelectedIndex)]);
+            // Show what was really saved: nothing changes if permission wasn't given.
+            var saved = controller.Protection;
+            autoPause.IsOn = saved.AutoPauseRed;
+            wait.SelectedIndex = Math.Max(0, Array.IndexOf(WaitChoices, saved.WaitDays));
+            autoPause.IsEnabled = true;
+            wait.IsEnabled = !managed;
+            applying = false;
+            if (!result.Succeeded || result.Message is not null) Show(InfoBarSeverity.Warning, result.Message!);
+            await onChanged();
+        }
+        autoPause.Toggled += async (_, _) => await ApplyAsync();
+        wait.SelectionChanged += async (_, _) => await ApplyAsync();
+
+        return Card(panel);
     }
 
     private string DailyText(DailyCheckState state)
@@ -439,7 +525,8 @@ public sealed partial class MainWindow : Window
         var lastRun = controller.DailyCheckLastRunText();
         return state switch
         {
-            DailyCheckState.Moved => "PatchLight was moved to another folder, so the daily check can't find it. Turn it on again.",
+            DailyCheckState.Moved => "PatchLight was moved to another folder, so the automatic check can't find it. Turn it on again.",
+            DailyCheckState.Outdated => "Set up by an older PatchLight, so it only runs once a day. Turn it off and on again to check every hour.",
             DailyCheckState.On => lastRun.Length > 0 ? lastRun : "On. It hasn't run yet.",
             _ => "Off. Paused updates then stay paused until you press Resume.",
         };
