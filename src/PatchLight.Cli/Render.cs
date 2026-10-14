@@ -40,6 +40,17 @@ public static class Render
             }
         }
 
+        foreach (var v in result.Verdicts.Where(v => v.News.Count > 0))
+        {
+            console.WriteLine();
+            console.MarkupLineInterpolated($"[bold]{v.Update.PauseKey ?? v.Update.Title}[/] in the news (not confirmed by Microsoft):");
+            foreach (var article in v.News)
+            {
+                console.MarkupLineInterpolated($"  • {article.Title} [grey]({article.Source})[/]");
+                console.MarkupLineInterpolated($"    [grey]{article.Url}[/]");
+            }
+        }
+
         var setAside = result.Verdicts.SelectMany(v => v.SetAside).DistinctBy(i => i.Id).ToList();
         if (setAside.Count > 0)
         {

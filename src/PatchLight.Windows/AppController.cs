@@ -94,6 +94,13 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
     // chooses, the PC decides (work PCs count them).
     public bool CountBusinessIssues => State.CountBusinessIssues ?? (TryBackend() is not null && countBusinessByDefault);
 
+    public async Task SetCheckNewsAsync(bool on)
+    {
+        SaveState(State with { CheckNews = on });
+        if (TryBackend() is { } b) b.Service.News = on ? b.NewsSource : null;
+        await CheckAsync();
+    }
+
     public async Task SetCountBusinessIssuesAsync(bool count)
     {
         SaveState(State with { CountBusinessIssues = count });
@@ -191,6 +198,7 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
         var created = createBackend();
         countBusinessByDefault = created.Service.CountBusinessIssues;
         if (State.CountBusinessIssues is { } chosen) created.Service.CountBusinessIssues = chosen;
+        created.Service.News = State.CheckNews ? created.NewsSource : null;
         return backend = created;
     }
 

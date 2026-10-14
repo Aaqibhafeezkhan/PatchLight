@@ -29,6 +29,7 @@ public static class CliApp
             // The daily check runs as SYSTEM and trusts this folder, so lock it whenever we can.
             if (isAdmin) DataFolder.Secure(SystemInfo.DataDirectory);
             var service = PatchLightHost.CreateService(windows.DisplayVersion);
+            if (!args.Contains("--no-news", StringComparer.OrdinalIgnoreCase)) service.News = PatchLightHost.CreateNewsSource();
 
             switch (command)
             {

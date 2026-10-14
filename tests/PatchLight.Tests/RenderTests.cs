@@ -115,4 +115,18 @@ public class RenderTests
 
     [Fact]
     public void Help_lists_uninstall() => Assert.Contains("patchlight uninstall", Output(c => Render.Help(c)));
+
+    [Fact]
+    public void Shows_news_reports_with_their_links()
+    {
+        var article = new NewsArticle("Example", "KB5127648 breaks Wi-Fi", "https://news.example/0", Now, ["KB5127648"], true);
+        var verdict = new UpdateVerdict(Update(), Light.Yellow, "Problems reported in the news", [], [], News: [article]);
+        var result = new CheckResult([verdict], [], [], true, new IssueSnapshot([], Now, false), Now);
+
+        var text = Output(c => Render.Check(c, result, isAdmin: true));
+
+        Assert.Contains("in the news (not confirmed by Microsoft)", text);
+        Assert.Contains("KB5127648 breaks Wi-Fi (Example)", text);
+        Assert.Contains("https://news.example/0", text);
+    }
 }

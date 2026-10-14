@@ -14,4 +14,7 @@ public sealed class Backend
     public required Action<bool> SetStartWithWindows { get; init; }
     public string? BackgroundLogPath { get; init; }
     public bool IsDemo { get; init; }
+
+    // Tech-news reports; the app turns them off when the person does.
+    public INewsSource? NewsSource { get; init; }
 }

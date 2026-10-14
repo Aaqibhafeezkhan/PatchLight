@@ -43,6 +43,20 @@ public static class VerdictEngine
         return new(update, Light.Green, safe, affecting, fixes, setAside);
     }
 
+    // News reports are unconfirmed, so they can make a safe update "wait" but never "problems".
+    public static UpdateVerdict WithNews(UpdateVerdict verdict, IReadOnlyList<NewsArticle> reports)
+    {
+        if (reports.Count == 0) return verdict;
+        if (verdict.Light != Light.Green) return verdict with { News = reports };
+        var more = reports.Count > 1 ? $" (+{reports.Count - 1} more)" : "";
+        return verdict with
+        {
+            Light = Light.Yellow,
+            Reason = $"Problems reported in the news, not confirmed by Microsoft yet: {reports[0].Title}{more}",
+            News = reports,
+        };
+    }
+
     // An upgrade brings the newest build of that version, so every open problem on its page applies.
     public static UpdateVerdict JudgeUpgrade(PendingUpdate update, IReadOnlyList<KnownIssue> issues, bool countBusinessIssues)
     {

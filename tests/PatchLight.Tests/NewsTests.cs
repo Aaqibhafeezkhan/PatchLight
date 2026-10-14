@@ -1,0 +1,168 @@
+using System.Net;
+using Microsoft.Extensions.Time.Testing;
+using PatchLight.Core;
+using static PatchLight.Tests.VerdictEngineTests;
+
+namespace PatchLight.Tests;
+
+public sealed class NewsTests : IDisposable
+{
+    private static readonly DateTimeOffset Now = new(2026, 10, 14, 12, 0, 0, TimeSpan.Zero);
+    private readonly string dir = Path.Combine(Path.GetTempPath(), "patchlight-news-" + Guid.NewGuid());
+
+    public void Dispose()
+    {
+        if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+    }
+
+    // Made-up feed in the shape of a real RSS 2.0 news feed.
+    private static string Feed(params (string Title, string Description, string Date)[] items) => $"""
+        <?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0"><channel><title>Example tech news</title>
+        {string.Join("\n", items.Select((it, i) => $"""
+            <item><title>{it.Title}</title><link>https://news.example/{i}</link>
+            <description><![CDATA[{it.Description}]]></description><pubDate>{it.Date}</pubDate></item>
+            """))}
+        </channel></rss>
+        """;
+
+    private const string Day = "Tue, 13 Oct 2026 18:00:00 +0000";
+
+    [Fact]
+    public void Reads_articles_and_the_kb_numbers_they_mention()
+    {
+        var articles = NewsFeedParser.Parse(Feed(("Windows 11 KB5127648 breaks Wi-Fi sign-in", "Some PCs can't connect.", Day)), "Example");
+
+        var article = Assert.Single(articles);
+        Assert.Equal("Windows 11 KB5127648 breaks Wi-Fi sign-in", article.Title);
+        Assert.Equal("https://news.example/0", article.Url);
+        Assert.Equal("Example", article.Source);
+        Assert.Equal(["KB5127648"], article.Kbs);
+        Assert.True(article.ReportsProblem);
+        Assert.Equal(new DateTimeOffset(2026, 10, 13, 18, 0, 0, TimeSpan.Zero), article.Published);
+    }
+
+    [Theory]
+    [InlineData("Windows 11 KB5127648 breaks Wi-Fi sign-in, but there's a manual fix", true)]
+    [InlineData("Microsoft admits a Windows 11 bug is causing stutter in games", true)]
+    [InlineData("Windows 11 KB5127648 fixes bugs related to audio", false)]
+    [InlineData("Windows 11 KB5127648 is out with major changes", false)]
+    [InlineData("I tested the October update: everything new, improved, and fixed", false)]
+    public void Only_problem_reports_count(string title, bool problem) =>
+        Assert.Equal(problem, NewsFeedParser.Parse(Feed((title, "KB5127648", Day)), "Example").Single().ReportsProblem);
+
+    [Fact]
+    public void Kb_in_the_text_counts_only_for_problem_headlines()
+    {
+        var articles = NewsFeedParser.Parse(Feed(
+            ("Microsoft admits a Windows 11 bug is causing stutter in games", "After installing KB5127648, games stutter.", Day),
+            ("Weekly roundup", "This week: KB5127648 and more.", Day)), "Example");
+
+        Assert.Equal(["KB5127648"], NewsMatcher.ReportsFor(articles, Update("KB5127648")).Select(a => a.Kbs.Single()));
+        Assert.Single(NewsMatcher.ReportsFor(articles, Update("KB5127648")));
+    }
+
+    [Fact]
+    public void Damaged_feed_gives_no_articles() =>
+        Assert.Empty(NewsFeedParser.Parse("<rss><channel><item><title>oops", "Example"));
+
+    [Fact]
+    public void News_turns_a_safe_update_into_wait_but_never_red()
+    {
+        var report = new NewsArticle("Example", "KB5127648 breaks Wi-Fi", "https://news.example/0", Now, ["KB5127648"], true);
+        var safe = VerdictEngine.Judge(Update(), [], new DateOnly(2026, 10, 13));
+
+        var withNews = VerdictEngine.WithNews(safe, [report]);
+        Assert.Equal(Light.Yellow, withNews.Light);
+        Assert.Equal("Problems reported in the news, not confirmed by Microsoft yet: KB5127648 breaks Wi-Fi", withNews.Reason);
+        Assert.Single(withNews.News);
+
+        var red = VerdictEngine.Judge(Update(), [Issue(IssueStatus.Confirmed, kb: "KB5127648")], new DateOnly(2026, 10, 13));
+        var redWithNews = VerdictEngine.WithNews(red, [report]);
+        Assert.Equal(Light.Red, redWithNews.Light);
+        Assert.Equal(red.Reason, redWithNews.Reason);
+        Assert.Single(redWithNews.News);
+    }
+
+    [Fact]
+    public async Task Source_keeps_articles_for_30_days_and_survives_failures()
+    {
+        var time = new FakeTimeProvider(Now);
+        var store = Path.Combine(dir, "news.json");
+        var feed = Feed(("Windows 11 KB5127648 breaks Wi-Fi sign-in", "", Day));
+
+        var source = new RssNewsSource(new HttpClient(new StubHandler(_ => feed)), store, time,
+            [("Example", "https://news.example/feed")]);
+        Assert.Single(await source.GetAsync(CancellationToken.None));
+
+        // Next time the site is down: the saved article is still there.
+        var offline = new RssNewsSource(new HttpClient(new StubHandler(_ => throw new HttpRequestException("down"))), store, time,
+            [("Example", "https://news.example/feed")]);
+        Assert.Single(await offline.GetAsync(CancellationToken.None));
+
+        // A month and a bit later it's gone.
+        time.Advance(TimeSpan.FromDays(31));
+        Assert.Empty(await offline.GetAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Service_adds_news_to_the_check()
+    {
+        var time = new FakeTimeProvider(Now);
+        var updates = new FakeUpdateClient();
+        updates.Pending.Add(Update(released: new DateOnly(2026, 10, 1)));
+        var service = new PatchLightService(updates, new FakeIssueSource(time), new HoldStore(Path.Combine(dir, "h.json")), time, "25H2")
+        {
+            News = new FixedNews([new NewsArticle("Example", "KB5127648 breaks Wi-Fi", "https://news.example/0", Now, ["KB5127648"], true)]),
+        };
+
+        var verdict = Assert.Single((await service.CheckAsync(false, CancellationToken.None)).Verdicts);
+
+        Assert.Equal(Light.Yellow, verdict.Light);
+        Assert.Single(verdict.News);
+    }
+
+    [Fact]
+    public async Task Broken_news_never_breaks_the_check()
+    {
+        var time = new FakeTimeProvider(Now);
+        var updates = new FakeUpdateClient();
+        updates.Pending.Add(Update(released: new DateOnly(2026, 10, 1)));
+        var service = new PatchLightService(updates, new FakeIssueSource(time), new HoldStore(Path.Combine(dir, "h.json")), time, "25H2")
+        {
+            News = new ThrowingNews(),
+        };
+
+        Assert.Equal(Light.Green, Assert.Single((await service.CheckAsync(false, CancellationToken.None)).Verdicts).Light);
+    }
+
+    [Fact]
+    public void Reads_kb_numbers_from_the_full_article_text_too()
+    {
+        const string xml = """
+            <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>
+            <item><title>Microsoft admits a Windows 11 bug is causing stutter in games</title><link>https://news.example/1</link>
+            <description>Short teaser.</description>
+            <content:encoded><![CDATA[<p>After installing <b>KB5127648</b>, some games stutter.</p>]]></content:encoded>
+            <pubDate>Tue, 13 Oct 2026 18:00:00 +0000</pubDate></item>
+            </channel></rss>
+            """;
+        Assert.Equal(["KB5127648"], Assert.Single(NewsFeedParser.Parse(xml, "Example")).Kbs);
+    }
+
+    private sealed class FixedNews(IReadOnlyList<NewsArticle> articles) : INewsSource
+    {
+        public Task<IReadOnlyList<NewsArticle>> GetAsync(CancellationToken ct) => Task.FromResult(articles);
+    }
+
+    private sealed class ThrowingNews : INewsSource
+    {
+        public Task<IReadOnlyList<NewsArticle>> GetAsync(CancellationToken ct) => throw new InvalidOperationException("boom");
+    }
+
+    private sealed class StubHandler(Func<HttpRequestMessage, string> respond) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(respond(request)) });
+    }
+}

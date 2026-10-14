@@ -45,10 +45,14 @@ public sealed record UpdateVerdict(
     string Reason,
     IReadOnlyList<KnownIssue> Issues,
     IReadOnlyList<KnownIssue> Fixes,
-    IReadOnlyList<KnownIssue>? SetAside = null)
+    IReadOnlyList<KnownIssue>? SetAside = null,
+    IReadOnlyList<NewsArticle>? News = null)
 {
     // Open problems that usually only hit business PCs, listed but not counted on this PC.
     public IReadOnlyList<KnownIssue> SetAside { get; init; } = SetAside ?? [];
+
+    // Tech-news reports of problems with this update that Microsoft hasn't confirmed (yet).
+    public IReadOnlyList<NewsArticle> News { get; init; } = News ?? [];
 }
 
 // IssueIds: the open problems that justified the pause. Older holds.json files don't have it.

@@ -97,6 +97,14 @@ public class UpdateCardTests
     }
 
     [Fact]
+    public void Card_carries_the_news_reports()
+    {
+        var article = new NewsArticle("Example", "KB5127648 breaks Wi-Fi", "https://news.example/0", Now, ["KB5127648"], true);
+        var card = Assert.Single(UpdateCard.Build(Result([Verdict(Light.Yellow) with { News = [article] }])));
+        Assert.Equal("KB5127648 breaks Wi-Fi", Assert.Single(card.News).Title);
+    }
+
+    [Fact]
     public void Card_counts_the_problems_an_update_fixes()
     {
         var card = Assert.Single(UpdateCard.Build(Result([Verdict(Light.Green,

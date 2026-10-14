@@ -14,12 +14,22 @@ public static class PatchLightHost
 
     public static string BackgroundLogPath(string dataDirectory) => Path.Combine(dataDirectory, "last-background-check.json");
 
+    // Tech-news reports are kept per person, next to their settings.
+    public static INewsSource CreateNewsSource() => new RssNewsSource(NewHttpClient(),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight", "news.json"),
+        TimeProvider.System, RssNewsSource.DefaultFeeds);
+
+    private static HttpClient NewHttpClient()
+    {
+        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"PatchLight/0.4 (+{ProjectUrl})");
+        return http;
+    }
+
     public static PatchLightService CreateService(string windowsVersion, string? dataDirectory = null)
     {
         var data = dataDirectory ?? SystemInfo.DataDirectory;
-        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd($"PatchLight/0.2 (+{ProjectUrl})");
-        var source = new ReleaseHealthSource(http, Path.Combine(data, "cache"), TimeProvider.System);
+        var source = new ReleaseHealthSource(NewHttpClient(), Path.Combine(data, "cache"), TimeProvider.System);
         return new PatchLightService(new WindowsUpdateClient(), source, new HoldStore(HoldsPath(data)),
             TimeProvider.System, windowsVersion)
         {

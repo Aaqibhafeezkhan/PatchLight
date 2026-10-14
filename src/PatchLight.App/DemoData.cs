@@ -22,6 +22,18 @@ public static class DemoData
         return (service, new DemoActions(service));
     }
 
+    // A made-up news report, so the demo shows what one looks like.
+    public static INewsSource News { get; } = new DemoNews();
+
+    private sealed class DemoNews : INewsSource
+    {
+        public Task<IReadOnlyList<NewsArticle>> GetAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<NewsArticle>>(
+        [
+            new("Example News", "Windows Defender update KB2267602 reportedly slows down some games",
+                "https://github.com/yo-gabriel-portfolio-here/PatchLight#demo", DateTimeOffset.Now.AddDays(-1), ["KB2267602"], true),
+        ]);
+    }
+
     private static DateOnly DaysAgo(int days) => DateOnly.FromDateTime(DateTime.Today.AddDays(-days));
 
     private static KnownIssue Issue(string id, string title, string summary, string kb, string build, int daysAgo,

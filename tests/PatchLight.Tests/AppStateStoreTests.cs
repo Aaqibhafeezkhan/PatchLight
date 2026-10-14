@@ -68,4 +68,13 @@ public sealed class AppStateStoreTests : IDisposable
         store.Save(new AppState(CountBusinessIssues: true));
         Assert.True(store.Load().CountBusinessIssues);
     }
+
+    [Fact]
+    public void News_is_on_unless_turned_off()
+    {
+        var store = new AppStateStore(FilePath);
+        Assert.True(store.Load().CheckNews);
+        store.Save(new AppState(CheckNews: false));
+        Assert.False(store.Load().CheckNews);
+    }
 }

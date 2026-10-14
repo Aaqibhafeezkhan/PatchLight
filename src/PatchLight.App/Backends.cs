@@ -26,6 +26,7 @@ public static class Backends
                 else autostart.Disable();
             },
             BackgroundLogPath = PatchLightHost.BackgroundLogPath(SystemInfo.DataDirectory),
+            NewsSource = PatchLightHost.CreateNewsSource(),
         };
     }
 
@@ -40,6 +41,7 @@ public static class Backends
             GetDailyCheckAsync = () => Task.FromResult(actions.DailyCheckOn ? DailyCheckState.On : DailyCheckState.Off),
             GetStartWithWindows = () => startWithWindows,
             SetStartWithWindows = on => startWithWindows = on,
+            NewsSource = DemoData.News,
             IsDemo = true,
         };
     }

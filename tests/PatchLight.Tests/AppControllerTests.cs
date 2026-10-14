@@ -13,6 +13,7 @@ public sealed class AppControllerTests : IDisposable
     private readonly FakeIssueSource issues;
     private readonly FakeActions actions;
     private readonly AppController controller;
+    private readonly PatchLightService service;
 
     public AppControllerTests()
     {
@@ -20,10 +21,11 @@ public sealed class AppControllerTests : IDisposable
         issues.Issues.Add(Issue(IssueStatus.Confirmed, kb: "KB5127648"));
         updates.Pending.Add(Update());
         actions = new FakeActions(updates);
-        var service = new PatchLightService(updates, issues, new HoldStore(Path.Combine(dir, "holds.json")), time, "25H2");
+        service = new PatchLightService(updates, issues, new HoldStore(Path.Combine(dir, "holds.json")), time, "25H2");
         controller = new AppController(() => new Backend
         {
             Service = service,
+            NewsSource = new NoNews(),
             Actions = actions,
             GetDailyCheckAsync = () => Task.FromResult(DailyCheckState.Off),
             GetStartWithWindows = () => false,
@@ -93,6 +95,11 @@ public sealed class AppControllerTests : IDisposable
         Assert.Equal(DailyCheckState.Off, await broken.GetDailyCheckAsync());
     }
 
+    private sealed class NoNews : INewsSource
+    {
+        public Task<IReadOnlyList<NewsArticle>> GetAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<NewsArticle>>([]);
+    }
+
     private sealed class GatedUpdateClient : IUpdateClient
     {
         private readonly FakeUpdateClient inner = new();
@@ -160,5 +167,17 @@ public sealed class AppControllerTests : IDisposable
         var result = await controller.UninstallAsync("KB5124008");
         Assert.True(result.Succeeded);
         Assert.Equal(("KB5124008", 14), actions.LastUninstall);
+    }
+
+    [Fact]
+    public async Task Turning_news_off_stops_using_it()
+    {
+        await controller.CheckAsync();
+        await controller.SetCheckNewsAsync(false);
+        Assert.False(controller.State.CheckNews);
+        Assert.Null(service.News);
+
+        await controller.SetCheckNewsAsync(true);
+        Assert.NotNull(service.News);
     }
 }

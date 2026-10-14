@@ -136,6 +136,24 @@ public sealed partial class MainWindow : Window
             body.Children.Add(line);
         }
 
+        if (card.News.Count > 0)
+        {
+            body.Children.Add(new TextBlock
+            {
+                Text = "In the news (not confirmed by Microsoft yet):", Margin = new Thickness(0, 4, 0, 0),
+                TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold,
+            });
+            foreach (var article in card.News.Take(3))
+            {
+                var line = new TextBlock { TextWrapping = TextWrapping.Wrap };
+                line.Inlines.Add(new Run { Text = "• " + article.Title + " " });
+                var link = new Hyperlink { NavigateUri = new Uri(article.Url) };
+                link.Inlines.Add(new Run { Text = article.Source });
+                line.Inlines.Add(link);
+                body.Children.Add(line);
+            }
+        }
+
         if (card.SetAside.Count > 0)
         {
             body.Children.Add(new TextBlock
@@ -330,6 +348,13 @@ public sealed partial class MainWindow : Window
             "Some of Microsoft's known problems only hit PCs run by a company: joined to a domain, virtual desktops, " +
             "servers or IT-managed devices. On a home PC they're still listed but don't change the light. " +
             "Turn this on if this PC belongs to a company or school.")));
+
+        var news = new ToggleSwitch { Header = "Check tech news for reported problems", IsOn = controller.State.CheckNews };
+        news.Toggled += async (_, _) => await controller.SetCheckNewsAsync(news.IsOn);
+        PageContent.Children.Add(Card(Section(news,
+            "Problems often show up on tech news sites (Neowin, Windows Latest) days before Microsoft lists them. " +
+            "PatchLight reads their public news feeds; a report can turn a safe update into \"wait\", never into \"problems\". " +
+            "Nothing about you or your PC is sent.")));
 
         var days = new NumberBox
         {

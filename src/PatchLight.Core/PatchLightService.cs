@@ -10,13 +10,19 @@ public sealed class PatchLightService(
     // Off on home PCs: problems that usually only hit business PCs are listed but don't color the light.
     public bool CountBusinessIssues { get; set; } = true;
 
+    // Optional tech-news reports. Only the app and the command line use them; they never decide when a pause ends.
+    public INewsSource? News { get; set; }
+
     public async Task<CheckResult> CheckAsync(bool applyAutoRelease, CancellationToken ct)
     {
         var data = await issues.GetAsync(windowsVersion, ct);
         var pending = await updates.GetPendingAsync(ct);
         var now = time.GetUtcNow();
         var upgrades = await UpgradeIssuesAsync(pending, ct);
-        var verdicts = pending.Select(u => Judge(u, data.Issues, upgrades)).ToList();
+        var news = await NewsAsync(ct);
+        var verdicts = pending
+            .Select(u => VerdictEngine.WithNews(Judge(u, data.Issues, upgrades), NewsMatcher.ReportsFor(news, u)))
+            .ToList();
         var open = data.Issues.Concat(upgrades.Values.SelectMany(i => i ?? []))
             .Where(i => i.Status != IssueStatus.Resolved).Select(i => i.Id).ToHashSet();
 
@@ -226,6 +232,19 @@ public sealed class PatchLightService(
         !update.IsFeatureUpdate ? VerdictEngine.Judge(update, current, Today(), CountBusinessIssues)
         : upgrades[update.TargetVersion!] is { } target ? VerdictEngine.JudgeUpgrade(update, target, CountBusinessIssues)
         : VerdictEngine.UpgradeUnknown(update);
+
+    private async Task<IReadOnlyList<NewsArticle>> NewsAsync(CancellationToken ct)
+    {
+        if (News is null) return [];
+        try
+        {
+            return await News.GetAsync(ct);
+        }
+        catch (Exception) when (!ct.IsCancellationRequested)
+        {
+            return [];
+        }
+    }
 
     // Each offered upgrade is judged against its own version's page. One that can't be read becomes "wait",
     // not a failed check.
