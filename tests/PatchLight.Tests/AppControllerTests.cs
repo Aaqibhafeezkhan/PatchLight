@@ -17,6 +17,7 @@ public sealed class AppControllerTests : IDisposable
 
     public AppControllerTests()
     {
+        ErrorLog.Path = Path.Combine(dir, "last-error.txt");
         issues = new FakeIssueSource(time);
         issues.Issues.Add(Issue(IssueStatus.Confirmed, kb: "KB5127648"));
         updates.Pending.Add(Update());

@@ -22,6 +22,9 @@ public static partial class UpdateRemover
 
     public static bool Succeeded(int exitCode) => exitCode is 0 or RestartNeeded;
 
+    // DISM and wusa return Windows error codes; written in hex they can be looked up.
+    public static string ErrorCode(int code) => $"0x{code:X8}";
+
     // Cumulative update packages are named "Package_for_RollupFix~...~26100.9711.1.6". The base build
     // can differ from the one Windows Update shows (26200 runs on 26100), so match on the revision.
     public static string? FindRollupPackage(string dismOutput, Version build) =>
@@ -39,7 +42,7 @@ public static partial class UpdateRemover
         if (MethodFor(update) == RemovalMethod.Dism)
         {
             var (listCode, list) = Run("dism.exe", "/online", "/get-packages", "/english");
-            if (listCode != 0) throw new PatchLightException($"Windows couldn't list its installed updates (error {listCode}).");
+            if (listCode != 0) throw new PatchLightException($"Windows couldn't list its installed updates (error {ErrorCode(listCode)}).");
             var package = FindRollupPackage(list, update.Build!) ?? throw new PatchLightException(
                 $"Windows can't remove {kb} anymore because a newer update replaced it. " +
                 "To go back further, use Settings > System > Recovery.");
@@ -50,7 +53,7 @@ public static partial class UpdateRemover
             code = Run("wusa.exe", "/uninstall", $"/kb:{kb[2..]}", "/quiet", "/norestart").ExitCode;
             if (code == NotInstalled) throw new PatchLightException($"{kb} isn't installed on this PC.");
         }
-        if (!Succeeded(code)) throw new PatchLightException($"Windows couldn't remove {kb} (error {code}).");
+        if (!Succeeded(code)) throw new PatchLightException($"Windows couldn't remove {kb} (error {ErrorCode(code)}).");
     }
 
     private static (int ExitCode, string Output) Run(string exe, params string[] args)

@@ -65,6 +65,12 @@ public class UpdateRemoverTests
     }
 
     [Theory]
+    [InlineData(-2146498523, "0x800F0825")]
+    [InlineData(5, "0x00000005")]
+    public void Error_codes_read_like_windows_shows_them(int code, string text) =>
+        Assert.Equal(text, UpdateRemover.ErrorCode(code));
+
+    [Theory]
     [InlineData(0, true)]
     [InlineData(3010, true)]   // done, restart needed
     [InlineData(5, false)]

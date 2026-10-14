@@ -3,7 +3,7 @@ namespace PatchLight.Windows;
 // Same place the command line uses, so one file tells what went wrong last.
 public static class ErrorLog
 {
-    public static string Path { get; } = System.IO.Path.Combine(
+    public static string Path { get; set; } = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight", "last-error.txt");
 
     public static void Write(Exception ex)

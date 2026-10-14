@@ -259,7 +259,14 @@ public sealed partial class MainWindow : Window
                     });
                     foreach (var issue in aside) body.Children.Add(IssueLine(issue, Secondary()));
                 }
-                if (counted.Count > 0 && item.Update.Kb is { } kb)
+                var removed = item.Update.Kb is { } k && controller.Result?.ActiveHolds.Any(h => h.Kb == k && h.IsWaiting) == true;
+                if (removed)
+                    body.Children.Add(new TextBlock
+                    {
+                        Text = "You removed this update. Restart your PC if you haven't yet.", Foreground = Secondary(),
+                        TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0),
+                    });
+                else if (counted.Count > 0 && item.Update.Kb is { } kb)
                 {
                     var remove = new Button { Content = "Uninstall this update", Margin = new Thickness(0, 6, 0, 0) };
                     remove.Click += async (_, _) => await UninstallAsync(remove, kb);
@@ -270,8 +277,15 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private bool uninstalling;
+
     private async Task UninstallAsync(Button button, string kb)
     {
+        if (uninstalling)
+        {
+            Show(InfoBarSeverity.Informational, "Another update is being removed. Wait for it to finish.");
+            return;
+        }
         var dialog = new ContentDialog
         {
             XamlRoot = Content.XamlRoot,
@@ -293,7 +307,16 @@ public sealed partial class MainWindow : Window
 
         button.IsEnabled = false;
         button.Content = "Uninstalling...";
-        var result = await controller.UninstallAsync(kb);
+        uninstalling = true;
+        ActionResult result;
+        try
+        {
+            result = await controller.UninstallAsync(kb);
+        }
+        finally
+        {
+            uninstalling = false;
+        }
         button.Content = "Uninstall this update";
         button.IsEnabled = !result.Succeeded;
         if (!result.Succeeded)
@@ -302,8 +325,18 @@ public sealed partial class MainWindow : Window
             return;
         }
         var restart = new Button { Content = "Restart now" };
-        restart.Click += (_, _) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-            Path.Combine(Environment.SystemDirectory, "shutdown.exe"), "/r /t 0") { CreateNoWindow = true, UseShellExecute = false });
+        restart.Click += (_, _) =>
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    Path.Combine(Environment.SystemDirectory, "shutdown.exe"), "/r /t 0") { CreateNoWindow = true, UseShellExecute = false });
+            }
+            catch (Exception)
+            {
+                Show(InfoBarSeverity.Warning, "Couldn't restart. Restart from the Start menu.");
+            }
+        };
         Show(result.Message is null ? InfoBarSeverity.Success : InfoBarSeverity.Warning,
             result.Message ?? $"Removed {kb}. Restart your PC to finish. Save your work first.", restart);
     }
