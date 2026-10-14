@@ -10,11 +10,15 @@ public static class Program
     private const string InstanceName = "PatchLight.App.Instance";
     private const string ShowSignalName = "PatchLight.App.Show";
 
+    // Run by the uninstaller (as administrator) before it removes the files.
+    public const string UninstallArgument = "--uninstall-cleanup";
+
     [STAThread]
     public static int Main(string[] args)
     {
         // Headless modes: the daily task (as SYSTEM) and the "Run as administrator" helper.
         if (args.Contains(DailyTask.Argument)) return RunBackgroundCheck();
+        if (args.Contains(UninstallArgument)) return RunUninstallCleanup();
         if (ElevatedCommand.Parse(args) is { } command) return RunElevated(command);
 
         var demo = args.Contains("--demo");
@@ -61,6 +65,39 @@ public static class Program
             }
         }
         return 0;
+    }
+
+    // Each step is best effort: uninstalling must always finish, and every step that can run should.
+    private static int RunUninstallCleanup()
+    {
+        try
+        {
+            // Nothing PatchLight paused may stay hidden once it's gone.
+            PatchLightHost.CreateService(RequireWindows11()).ReleaseAllAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write(ex);
+        }
+        Try(DailyTask.Unregister);
+        Try(() => Autostart.ForCurrentUser().Disable());
+        Try(() =>
+        {
+            if (Directory.Exists(SystemInfo.DataDirectory)) Directory.Delete(SystemInfo.DataDirectory, recursive: true);
+        });
+        return 0;
+
+        static void Try(Action step)
+        {
+            try
+            {
+                step();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                ErrorLog.Write(ex);
+            }
+        }
     }
 
     private static int RunElevated(ElevatedCommand command)

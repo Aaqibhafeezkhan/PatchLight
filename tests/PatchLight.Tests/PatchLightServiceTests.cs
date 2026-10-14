@@ -241,4 +241,25 @@ public sealed class PatchLightServiceTests : IDisposable
         Assert.Equal(("id-KB5127648", false), _updates.HideCalls[^1]);
         Assert.False(_updates.Pending[0].IsHidden);
     }
+
+    [Fact]
+    public async Task Release_all_resumes_every_pause_and_forgets_them()
+    {
+        await HoldBadUpdate();
+        _holds.Save([.. _holds.Load(), new Hold("KB1111111", "id-gone", _time.GetUtcNow(), _time.GetUtcNow().AddDays(3), "Paused by you")]);
+
+        var released = await _service.ReleaseAllAsync(CancellationToken.None);
+
+        Assert.Equal(["KB5127648", "KB1111111"], released.Select(h => h.Kb));
+        Assert.Contains(("id-KB5127648", false), _updates.HideCalls);
+        Assert.DoesNotContain(_updates.HideCalls, c => c.Id == "id-gone");
+        Assert.Empty(_holds.Load());
+    }
+
+    [Fact]
+    public async Task Release_all_with_nothing_paused_does_nothing()
+    {
+        Assert.Empty(await _service.ReleaseAllAsync(CancellationToken.None));
+        Assert.Empty(_updates.HideCalls);
+    }
 }

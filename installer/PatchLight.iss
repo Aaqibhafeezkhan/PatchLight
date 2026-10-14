@@ -1,0 +1,54 @@
+; Builds dist\PatchLight-Setup.exe from the published app in dist\PatchLight.
+; Run scripts\publish.ps1 instead of calling this directly.
+
+#ifndef AppVersion
+  #define AppVersion "0.0.0"
+#endif
+
+[Setup]
+AppId={{6E2F3B1A-8C4D-4F7E-9B2A-5D1C0E7F4A93}
+AppName=PatchLight
+AppVersion={#AppVersion}
+AppVerName=PatchLight {#AppVersion}
+AppPublisher=PatchLight contributors
+AppPublisherURL=https://github.com/yo-gabriel-portfolio-here/PatchLight
+AppSupportURL=https://github.com/yo-gabriel-portfolio-here/PatchLight/issues
+; Program Files: only administrators can change it, which the daily check needs.
+DefaultDirName={autopf}\PatchLight
+DisableDirPage=yes
+DefaultGroupName=PatchLight
+DisableProgramGroupPage=yes
+PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=commandline
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+MinVersion=10.0.22000
+; Asks the person to close PatchLight (it may be in the tray) before installing or removing it.
+AppMutex=PatchLight.App.Instance
+CloseApplications=yes
+SetupIconFile=..\src\PatchLight.App\Assets\app.ico
+UninstallDisplayIcon={app}\PatchLight.exe
+UninstallDisplayName=PatchLight
+WizardStyle=modern
+Compression=lzma2/ultra64
+SolidCompression=yes
+OutputDir=..\dist
+OutputBaseFilename=PatchLight-Setup
+
+[Tasks]
+Name: "desktopicon"; Description: "Add a shortcut to the desktop"; Flags: unchecked
+
+[Files]
+Source: "..\dist\PatchLight\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{autoprograms}\PatchLight"; Filename: "{app}\PatchLight.exe"
+Name: "{autodesktop}\PatchLight"; Filename: "{app}\PatchLight.exe"; Tasks: desktopicon
+
+[Run]
+; Opened as the person, not as administrator, so "Start with Windows" lands in their own account.
+Filename: "{app}\PatchLight.exe"; Description: "Open PatchLight"; Flags: nowait postinstall skipifsilent runasoriginaluser
+
+[UninstallRun]
+; Resumes everything PatchLight paused, removes the daily check, "Start with Windows" and its data.
+Filename: "{app}\PatchLight.exe"; Parameters: "--uninstall-cleanup"; Flags: runhidden waituntilterminated; RunOnceId: "PatchLightCleanup"

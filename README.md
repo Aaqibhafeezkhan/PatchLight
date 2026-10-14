@@ -4,7 +4,7 @@
 
 **Know if a Windows update is safe before you install it.**
 
-**[⬇ Download PatchLight for Windows 11](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-win-x64.zip)** (zip, 67 MB) · [All downloads](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest)
+**[⬇ Download PatchLight for Windows 11](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** (installer, 46 MB) · [All downloads](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest)
 
 > Use the download link above. The green **Code → Download ZIP** button gives you the source code, not the app.
 
@@ -35,13 +35,15 @@ Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/wi
 
 ## Get it
 
-1. Download `PatchLight-win-x64.zip` from [Releases](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases).
-2. Unzip it to `C:\Program Files\PatchLight` (Windows asks for permission). Keep the folder together.
-3. Run `PatchLight.exe`. It starts with Windows from then on and waits in the tray. You can turn that off in **Settings**.
+1. Download **[PatchLight-Setup.exe](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** and open it.
+2. Windows asks for permission, then PatchLight installs and opens. Find it later in the Start menu.
+3. It starts with Windows from then on and waits in the tray. You can turn that off in **Settings**.
 
-Why Program Files? The daily check runs PatchLight with full system rights, so it only works from a folder
-that only administrators can change. Otherwise any program could swap PatchLight for something else.
-From another folder everything works except the daily check, and PatchLight tells you so.
+The files aren't code-signed yet, so Windows SmartScreen may warn you the first time. Choose **More info**, then **Run anyway**.
+
+Prefer no installer? `PatchLight-win-x64.zip` on the [downloads page](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest)
+is the same app. Unzip it to `C:\Program Files\PatchLight`: the daily check only runs PatchLight from a folder that only
+administrators can change, so other programs can't swap it for something else.
 
 ## Command line
 
@@ -63,9 +65,8 @@ patchlight history               Which recent update likely broke something
 
 ### Uninstall
 
-1. In PatchLight, open **Settings** and turn off **Daily automatic check** and **Start with Windows**.
-2. Resume anything you paused, from the **Updates** tab.
-3. Exit PatchLight from the tray icon, then delete its folder, `C:\ProgramData\PatchLight` and `%LOCALAPPDATA%\PatchLight`.
+Open **Settings → Apps → Installed apps**, find PatchLight and choose **Uninstall**. It resumes every update PatchLight
+paused, removes the daily check and "Start with Windows", and deletes its data in `C:\ProgramData\PatchLight`.
 
 ## Build
 
@@ -75,7 +76,7 @@ Requires the .NET 10 SDK on Windows 11. No Visual Studio needed.
 dotnet test
 dotnet run --project src/PatchLight.App -- --demo
 dotnet run --project src/PatchLight.Cli
-.\scripts\publish.ps1            # builds dist\PatchLight, dist\patchlight.exe and the zip
+.\scripts\publish.ps1            # builds the app, the installer (needs Inno Setup 6), the zip and patchlight.exe
 ```
 
 ## License

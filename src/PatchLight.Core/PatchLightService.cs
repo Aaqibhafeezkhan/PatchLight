@@ -57,6 +57,19 @@ public sealed class PatchLightService(
         return expired;
     }
 
+    // Used when PatchLight is uninstalled: nothing it paused may stay hidden once it's gone.
+    public async Task<IReadOnlyList<Hold>> ReleaseAllAsync(CancellationToken ct)
+    {
+        var all = holds.Load();
+        if (all.Count == 0) return [];
+
+        var pending = await updates.GetPendingAsync(ct);
+        foreach (var hold in all.Where(h => pending.Any(u => u.UpdateId == h.UpdateId)))
+            await updates.SetHiddenAsync(hold.UpdateId, false, ct);
+        holds.Save([]);
+        return all;
+    }
+
     public async Task<Hold> HoldAsync(string kbText, int days, string reason, CancellationToken ct)
     {
         var kb = RequireKb(kbText);
