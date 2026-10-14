@@ -4,6 +4,10 @@
 
 **Know if a Windows update is safe before you install it.**
 
+**[⬇ Download PatchLight for Windows 11](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-win-x64.zip)** (zip, 67 MB) · [All downloads](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest)
+
+> Use the download link above. The green **Code → Download ZIP** button gives you the source code, not the app.
+
 Windows updates break PCs more often than they should: black screens, Remote Desktop
 failures, broken audio. PatchLight checks every update waiting on your PC against
 Microsoft's own list of known problems and gives it a light:
