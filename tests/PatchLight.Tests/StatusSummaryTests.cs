@@ -82,4 +82,21 @@ public class StatusSummaryTests
     [InlineData(72, "3 days ago")]
     public void Ago_wording(double hours, string expected) =>
         Assert.Equal(expected, StatusSummary.Ago(TimeSpan.FromHours(hours)));
+
+    [Fact]
+    public void Waiting_pause_note_while_windows_does_not_offer_the_update()
+    {
+        var hold = new Hold("KB5124008", "", Now, Now.AddDays(14), "Removed by you");
+        var note = Assert.Single(StatusSummary.WaitingNotes(Result([], active: [hold])));
+        Assert.StartsWith("You removed KB5124008. When Windows offers it again, PatchLight pauses it", note);
+        Assert.Contains("Windows may install it again first", note);
+    }
+
+    [Fact]
+    public void Waiting_pause_note_when_windows_offers_the_update_again()
+    {
+        var hold = new Hold("KB5127648", "", Now, Now.AddDays(14), "Removed by you");
+        var note = Assert.Single(StatusSummary.WaitingNotes(Result([Verdict(Light.Red)], active: [hold])));
+        Assert.Equal("Windows offers KB5127648 again, which you removed. Press Pause now so it isn't installed.", note);
+    }
 }

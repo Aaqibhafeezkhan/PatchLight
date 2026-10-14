@@ -16,6 +16,7 @@ public sealed class PatchLightService(
         var pending = await updates.GetPendingAsync(ct);
         var now = time.GetUtcNow();
         var verdicts = pending.Select(u => VerdictEngine.Judge(u, data.Issues, Today(), CountBusinessIssues)).ToList();
+        var open = data.Issues.Where(i => i.Status != IssueStatus.Resolved).Select(i => i.Id).ToHashSet();
 
         var active = new List<Hold>();
         var released = new List<ReleasedHold>();
@@ -47,7 +48,9 @@ public sealed class PatchLightService(
             ReleaseReason? reason =
                 verdict is null ? ReleaseReason.Gone
                 : now >= hold.ExpiresOn ? ReleaseReason.Expired
-                : hold.IssueIds.Count > 0 && verdict.Light == Light.Green ? ReleaseReason.Fixed
+                // Decided by the problems recorded with the pause, not by the light, so the business setting
+                // (which the app and the daily check may see differently) can't end a pause early.
+                : hold.IssueIds.Count > 0 && !hold.IssueIds.Any(open.Contains) && verdict.Light != Light.Red ? ReleaseReason.Fixed
                 : null;
 
             if (reason is null)
@@ -66,19 +69,36 @@ public sealed class PatchLightService(
         return new CheckResult(verdicts, active, released, applyAutoRelease, data, now);
     }
 
-    // Ends pauses whose time ran out, without needing Microsoft's list. Used when a full check can't run,
-    // because a pause must end on time no matter what. Returns the pauses it ended.
+    // What a check does that doesn't need Microsoft's list: end pauses whose time ran out, and pause updates
+    // the person removed as soon as Windows offers them again. Used when a full check can't run.
+    // Returns the pauses it ended.
     public async Task<IReadOnlyList<Hold>> ReleaseExpiredAsync(CancellationToken ct)
     {
         var all = holds.Load();
         var now = time.GetUtcNow();
         var expired = all.Where(h => now >= h.ExpiresOn).ToList();
-        if (expired.Count == 0) return [];
+        var waiting = all.Where(h => h.IsWaiting && now < h.ExpiresOn).ToList();
+        if (expired.Count == 0 && waiting.Count == 0) return [];
 
         var pending = await updates.GetPendingAsync(ct);
         foreach (var hold in expired.Where(h => pending.Any(u => u.UpdateId == h.UpdateId)))
             await updates.SetHiddenAsync(hold.UpdateId, false, ct);
-        holds.Save([.. all.Except(expired)]);
+
+        var kept = new List<Hold>();
+        var changed = expired.Count > 0;
+        foreach (var hold in all.Except(expired))
+        {
+            var offered = hold.IsWaiting ? pending.FirstOrDefault(u => u.Kb == hold.Kb) : null;
+            if (offered is null)
+            {
+                kept.Add(hold);
+                continue;
+            }
+            if (!offered.IsHidden) await updates.SetHiddenAsync(offered.UpdateId, true, ct);
+            kept.Add(hold with { UpdateId = offered.UpdateId });
+            changed = true;
+        }
+        if (changed) holds.Save(kept);
         return expired;
     }
 
@@ -116,7 +136,8 @@ public sealed class PatchLightService(
         try
         {
             var data = await issues.GetAsync(windowsVersion, ct);
-            issueIds = VerdictEngine.Judge(update, data.Issues, Today(), CountBusinessIssues).Issues.Select(i => i.Id).ToList();
+            var verdict = VerdictEngine.Judge(update, data.Issues, Today(), CountBusinessIssues);
+            issueIds = verdict.Issues.Concat(verdict.SetAside).Select(i => i.Id).ToList();
         }
         catch (PatchLightException)
         {

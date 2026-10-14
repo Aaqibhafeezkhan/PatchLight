@@ -35,6 +35,16 @@ public static class StatusSummary
             ? $"Couldn't reach Microsoft. Using the copy saved {Ago(result.CheckedAt - result.Data.FetchedAt)}."
             : "Checked against Microsoft's known issues just now.";
 
+    // Updates the person removed and PatchLight should pause once Windows offers them again. Only a check with
+    // administrator rights (the daily task, also 5 minutes after start-up) can pause them, so say so plainly.
+    public static IReadOnlyList<string> WaitingNotes(CheckResult result) =>
+        result.ActiveHolds.Where(h => h.IsWaiting).Select(h =>
+            result.Verdicts.Any(v => v.Update.Kb == h.Kb && !v.Update.IsHidden)
+                ? $"Windows offers {h.Kb} again, which you removed. Press Pause now so it isn't installed."
+                : $"You removed {h.Kb}. When Windows offers it again, PatchLight pauses it until Microsoft fixes it " +
+                  $"(until {h.ExpiresOn.ToLocalTime():MMM d} at the latest). Windows may install it again first, " +
+                  "so check here after restarting.").ToList();
+
     public static string Ago(TimeSpan age) =>
         age.TotalHours < 1 ? "less than an hour ago"
         : age.TotalHours < 48 ? $"{(int)age.TotalHours} hours ago"

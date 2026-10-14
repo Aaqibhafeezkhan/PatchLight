@@ -97,9 +97,7 @@ public sealed partial class MainWindow : Window
         }
         if (controller.Cards.Count == 0)
             PageContent.Children.Add(Note("Nothing is waiting to install. You're up to date."));
-        foreach (var hold in controller.Result.ActiveHolds.Where(h => h.IsWaiting))
-            PageContent.Children.Add(Note($"You removed {hold.Kb}. When Windows offers it again, PatchLight pauses it " +
-                $"until Microsoft fixes it (until {hold.ExpiresOn.ToLocalTime():MMM d} at the latest)."));
+        foreach (var note in StatusSummary.WaitingNotes(controller.Result)) PageContent.Children.Add(Note(note));
         foreach (var card in controller.Cards) PageContent.Children.Add(UpdateCardView(card));
     }
 
@@ -264,9 +262,10 @@ public sealed partial class MainWindow : Window
             {
                 TextWrapping = TextWrapping.Wrap,
                 Text = "This also removes the security fixes that came with it, so only do it if this problem really affects you.\n\n" +
-                    $"PatchLight keeps {kb} paused until Microsoft fixes the problem (up to {controller.State.PauseDays} days), " +
-                    "then Windows installs it again. Windows asks for permission, it can take a few minutes, " +
-                    "and your PC needs to restart to finish.",
+                    $"When Windows offers {kb} again, PatchLight pauses it until Microsoft fixes the problem (up to " +
+                    $"{controller.State.PauseDays} days), then lets Windows install it. Windows might reinstall it before " +
+                    "PatchLight gets the chance, so open PatchLight after restarting.\n\n" +
+                    "Windows asks for permission, it can take a few minutes, and your PC needs to restart to finish.",
             },
             PrimaryButtonText = "Uninstall",
             CloseButtonText = "Cancel",

@@ -65,6 +65,19 @@ public sealed class BackgroundCheckTests : IDisposable
     }
 
     [Fact]
+    public async Task Removed_update_is_paused_even_when_microsoft_cannot_be_reached()
+    {
+        var holds = new HoldStore(Path.Combine(dir, "holds.json"));
+        updates.Pending.Add(Update());
+        holds.Save([new Hold("KB5127648", "", time.GetUtcNow(), time.GetUtcNow().AddDays(14), "Removed by you")]);
+
+        await BackgroundCheck.RunAsync(Service(new ThrowingIssueSource(), holds), LogPath, time, CancellationToken.None);
+
+        Assert.Contains(("id-KB5127648", true), updates.HideCalls);
+        Assert.Equal("id-KB5127648", Assert.Single(holds.Load()).UpdateId);
+    }
+
+    [Fact]
     public async Task Pause_that_has_not_ended_stays_when_microsoft_cannot_be_reached()
     {
         var holds = new HoldStore(Path.Combine(dir, "holds.json"));

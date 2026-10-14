@@ -19,14 +19,14 @@ public class BusinessOnlyTests
         Assert.DoesNotContain("Updated (9/14)", Parse().Single(i => i.Id == "4983").Description);
 
     [Theory]
-    [InlineData("5006")] // Azure Virtual Desktop hosts
-    [InlineData("5031")] // Administrator protection
-    [InlineData("4990")] // Domain-joined devices
-    [InlineData("4981")] // Remote Desktop Services in organizations
+    [InlineData("4990")] // "Domain-joined devices" in the title
+    [InlineData("4981")] // "Remote Desktop Services" in the title
     public void Business_issues_are_recognized(string id) =>
         Assert.True(Parse().Single(i => i.Id == id).LikelyBusinessOnly);
 
     [Theory]
+    [InlineData("5006")] // black screen "primarily observed" on Azure Virtual Desktop: home PCs can still get it
+    [InlineData("5031")] // "primarily affects" enterprise-managed devices
     [InlineData("3781")] // AC-3 audio
     [InlineData("4984")] // USB audio
     [InlineData("4983")] // Hyper-V Linux VMs: home users run these too
@@ -54,5 +54,27 @@ public class BusinessOnlyTests
         var issue = ReleaseHealthParser.Parse(html, ReleaseHealthParserTests.Url).Single(i => i.Id == "3781");
         Assert.Equal("", issue.Description);
         Assert.False(issue.LikelyBusinessOnly);
+    }
+
+    [Fact]
+    public void Hedged_wording_keeps_the_problem_counted() =>
+        Assert.False(BusinessSignals.IsLikelyBusinessOnly("Apps might close", "",
+            "This issue mostly affects domain-joined devices."));
+
+    [Fact]
+    public void Sentences_that_rule_something_out_dont_count() =>
+        Assert.False(BusinessSignals.IsLikelyBusinessOnly("Notifications might be wrong", "",
+            "This affects home PCs. This issue does not affect Windows 365 or Azure Virtual Desktop."));
+
+    [Fact]
+    public void Passing_mentions_of_windows_server_dont_count() =>
+        Assert.False(BusinessSignals.IsLikelyBusinessOnly("Defender notifications are wrong", "",
+            "This can happen on any version of Windows or Windows Server with Microsoft Defender Antivirus."));
+
+    [Fact]
+    public void Virtual_desktop_wording_counts_only_in_the_title()
+    {
+        Assert.False(BusinessSignals.IsLikelyBusinessOnly("Black screen after sign-in", "Seen in virtual desktop environments.", ""));
+        Assert.True(BusinessSignals.IsLikelyBusinessOnly("Azure Virtual Desktop sessions might disconnect", "", ""));
     }
 }

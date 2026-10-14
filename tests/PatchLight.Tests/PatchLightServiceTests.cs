@@ -326,4 +326,34 @@ public sealed class PatchLightServiceTests : IDisposable
         Assert.Equal("new", (await _service.GetInstalledAsync("5124008", CancellationToken.None)).Title);
         await Assert.ThrowsAsync<PatchLightException>(() => _service.GetInstalledAsync("KB1111111", CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Pause_records_business_problems_too()
+    {
+        _updates.Pending.Add(Update());
+        _issues.Issues.Add(Issue(IssueStatus.Mitigated) with { Id = "home" });
+        _issues.Issues.Add(Issue(IssueStatus.Confirmed) with { Id = "biz", LikelyBusinessOnly = true });
+        _service.CountBusinessIssues = false;
+
+        var hold = await _service.HoldAsync("KB5127648", 14, "Paused by you", CancellationToken.None);
+
+        Assert.Equal(["home", "biz"], hold.IssueIds);
+    }
+
+    [Fact]
+    public async Task Pause_lasts_until_every_problem_behind_it_is_fixed()
+    {
+        _updates.Pending.Add(Update(hidden: true));
+        _holds.Save([new Hold("KB5127648", "id-KB5127648", _time.GetUtcNow(), _time.GetUtcNow().AddDays(14), "Paused by you", ["home", "biz"])]);
+        _issues.Issues.Add(Issue(IssueStatus.Resolved) with { Id = "home" });
+        _issues.Issues.Add(Issue(IssueStatus.Confirmed) with { Id = "biz", LikelyBusinessOnly = true });
+        _service.CountBusinessIssues = false;   // the light is green here, but "biz" is still open
+
+        var stillPaused = await _service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+        Assert.Empty(stillPaused.Released);
+
+        _issues.Issues[1] = _issues.Issues[1] with { Status = IssueStatus.Resolved };
+        var released = await _service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+        Assert.Equal(ReleaseReason.Fixed, Assert.Single(released.Released).Reason);
+    }
 }
