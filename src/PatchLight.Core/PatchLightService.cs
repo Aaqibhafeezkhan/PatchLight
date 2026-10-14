@@ -23,8 +23,10 @@ public sealed class PatchLightService(
         var verdicts = pending
             .Select(u => VerdictEngine.WithNews(Judge(u, data.Issues, upgrades), NewsMatcher.ReportsFor(news, u)))
             .ToList();
-        var open = data.Issues.Concat(upgrades.Values.SelectMany(i => i ?? []))
-            .Where(i => i.Status != IssueStatus.Resolved).Select(i => i.Id).ToHashSet();
+        // Each pause is judged by the problems of its own Windows version: the same issue id can be fixed on
+        // this version's page and still open on the next version's.
+        var openNow = OpenIds(data.Issues);
+        var openIn = upgrades.ToDictionary(u => u.Key, u => OpenIds(u.Value ?? []), StringComparer.OrdinalIgnoreCase);
 
         var active = new List<Hold>();
         var released = new List<ReleasedHold>();
@@ -64,7 +66,9 @@ public sealed class PatchLightService(
                 : unknown ? null
                 // Decided by the problems recorded with the pause, not by the light, so the business setting
                 // (which the app and the daily check may see differently) can't end a pause early.
-                : hold.IssueIds.Count > 0 && !hold.IssueIds.Any(open.Contains) && verdict.Light != Light.Red ? ReleaseReason.Fixed
+                : hold.IssueIds.Count > 0
+                  && !hold.IssueIds.Any((hold.IsUpgrade ? openIn.GetValueOrDefault(hold.Kb, []) : openNow).Contains)
+                  && verdict.Light != Light.Red ? ReleaseReason.Fixed
                 : null;
 
             if (reason is null)
@@ -229,6 +233,9 @@ public sealed class PatchLightService(
     }
 
     private DateOnly Today() => DateOnly.FromDateTime(time.GetLocalNow().DateTime);
+
+    private static HashSet<string> OpenIds(IEnumerable<KnownIssue> issues) =>
+        issues.Where(i => i.Status != IssueStatus.Resolved).Select(i => i.Id).ToHashSet();
 
     private UpdateVerdict Judge(PendingUpdate update, IReadOnlyList<KnownIssue> current,
         Dictionary<string, IReadOnlyList<KnownIssue>?> upgrades) =>

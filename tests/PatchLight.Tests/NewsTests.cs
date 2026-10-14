@@ -68,6 +68,24 @@ public sealed class NewsTests : IDisposable
         Assert.Single(NewsMatcher.ReportsFor(articles, Update("KB5127648")));
     }
 
+    [Theory]
+    [InlineData("Tue, 13 Oct 2026 14:00:00 EDT")]
+    [InlineData("Tue, 13 Oct 2026 18:00:00 GMT")]
+    [InlineData("Tue, 13 Oct 2026 11:00:00 PDT")]
+    public void Reads_dates_with_named_time_zones(string date) =>
+        Assert.Equal(new DateTimeOffset(2026, 10, 13, 18, 0, 0, TimeSpan.Zero),
+            NewsFeedParser.Parse(Feed(("KB5127648 breaks Wi-Fi", "", date)), "Example").Single().Published.ToUniversalTime());
+
+    [Fact]
+    public async Task Article_without_a_readable_date_counts_from_when_it_was_seen()
+    {
+        var time = new FakeTimeProvider(Now);
+        var source = new RssNewsSource(new HttpClient(new StubHandler(_ => Feed(("KB5127648 breaks Wi-Fi", "", "sometime last week")))),
+            Path.Combine(dir, "news.json"), time, [("Example", "https://news.example/feed")]);
+
+        Assert.Equal(Now, Assert.Single(await source.GetAsync(CancellationToken.None)).Published);
+    }
+
     [Fact]
     public void Damaged_feed_gives_no_articles() =>
         Assert.Empty(NewsFeedParser.Parse("<rss><channel><item><title>oops", "Example"));

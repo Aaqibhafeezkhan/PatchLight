@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Single-file publish output
 dist/
+
+# winget manifests made by scripts/winget-manifest.ps1 (they go to microsoft/winget-pkgs, not here)
+winget/

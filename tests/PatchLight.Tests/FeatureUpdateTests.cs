@@ -153,6 +153,23 @@ public sealed class FeatureUpdateTests : IDisposable
     }
 
     [Fact]
+    public async Task A_problem_still_open_in_the_new_version_does_not_keep_this_versions_pause()
+    {
+        var (service, updates, issues) = Setup();
+        updates.Pending.Add(Update());
+        updates.Pending.Add(Upgrade());
+        // Same issue id on both pages: fixed for 25H2, still open on 26H2.
+        issues.ByVersion["25H2"] = [Issue(IssueStatus.Confirmed) with { Id = "5031" }];
+        issues.ByVersion["26H2"] = [Issue(IssueStatus.Mitigated) with { Id = "5031" }];
+        await service.HoldAsync("KB5127648", 14, "Paused by you", CancellationToken.None);
+
+        issues.ByVersion["25H2"] = [Issue(IssueStatus.Resolved) with { Id = "5031" }];
+        var result = await service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+
+        Assert.Equal("KB5127648", Assert.Single(result.Released, r => r.Reason == ReleaseReason.Fixed).Hold.Kb);
+    }
+
+    [Fact]
     public void Card_offers_pause_by_version() =>
         Assert.Equal("26H2", Assert.Single(UpdateCard.Build(new CheckResult(
             [VerdictEngine.JudgeUpgrade(Upgrade(), [Issue(IssueStatus.Confirmed)], true)], [], [], false,

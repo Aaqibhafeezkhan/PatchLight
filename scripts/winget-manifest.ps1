@@ -12,6 +12,11 @@ Remove-Item $temp
 
 $dir = Join-Path $root "winget\manifests\g\G4SBO\PatchLight\$Version"
 New-Item -ItemType Directory -Force $dir | Out-Null
+# winget-pkgs expects UTF-8 without a byte order mark, which Set-Content can't write in Windows PowerShell 5.1.
+function Write-Manifest([string] $Name, [Parameter(ValueFromPipeline)] [string] $Text) {
+    [IO.File]::WriteAllText((Join-Path $dir $Name), $Text, (New-Object Text.UTF8Encoding $false))
+}
+
 $id = 'G4SBO.PatchLight'
 $schema = '1.6.0'
 
@@ -22,7 +27,7 @@ PackageVersion: $Version
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: $schema
-"@ | Set-Content (Join-Path $dir "$id.yaml") -Encoding utf8
+"@ | Write-Manifest "$id.yaml"
 
 @"
 # yaml-language-server: `$schema=https://aka.ms/winget-manifest.installer.$schema.schema.json
@@ -42,7 +47,7 @@ Installers:
   InstallerSha256: $sha
 ManifestType: installer
 ManifestVersion: $schema
-"@ | Set-Content (Join-Path $dir "$id.installer.yaml") -Encoding utf8
+"@ | Write-Manifest "$id.installer.yaml"
 
 @"
 # yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.$schema.schema.json
@@ -66,7 +71,7 @@ Tags:
 ReleaseNotesUrl: https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/tag/v$Version
 ManifestType: defaultLocale
 ManifestVersion: $schema
-"@ | Set-Content (Join-Path $dir "$id.locale.en-US.yaml") -Encoding utf8
+"@ | Write-Manifest "$id.locale.en-US.yaml"
 
 Write-Host "Manifests written to $dir"
 Write-Host "Check them with: winget validate --manifest `"$dir`""

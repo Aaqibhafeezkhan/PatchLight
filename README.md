@@ -68,6 +68,8 @@ patchlight uninstall KB5124008   Remove an installed update and keep it paused u
 
 - **Lights:** each pending update is matched with the known issues on Microsoft's release health page for your Windows version. Cumulative updates inherit open problems from the builds they build on.
 - **Pausing:** uses Windows Update's own "hide this update" switch, so nothing is uninstalled or blocked outside Windows Update.
+  Afterwards PatchLight asks Windows to search for updates again (like pressing "Check for updates"), so Settings shows
+  the change right away. Depending on your Windows Update settings, that search may also start installing the other updates.
 - **Uninstalling:** only when you ask. Windows cumulative updates are removed with DISM, other updates with `wusa`.
   Windows can only remove its newest cumulative update; for older ones PatchLight points you to Settings > System > Recovery.
   After a restart Windows offers the update again, and PatchLight's check (it also runs 5 minutes after start-up) pauses it.
@@ -89,7 +91,8 @@ PatchLight doesn't collect, send or share anything about you or your PC. Over th
   to spot reported problems (turn this off in Settings, or run `patchlight --no-news`),
 - asks Windows Update on your own PC which updates are waiting.
 
-No account, no analytics, no server of ours. These sites see an ordinary download from your PC, nothing more.
+No account, no analytics, no server of ours. Like any app that reads a web page, these downloads show the sites your
+IP address and that the request comes from PatchLight. Nothing about you, your PC or your updates is sent.
 This program will not transfer any information to other networked systems unless specifically requested by the user
 or the person installing or operating it.
 
