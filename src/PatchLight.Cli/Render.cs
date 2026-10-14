@@ -40,6 +40,15 @@ public static class Render
             }
         }
 
+        var setAside = result.Verdicts.SelectMany(v => v.SetAside).DistinctBy(i => i.Id).ToList();
+        if (setAside.Count > 0)
+        {
+            console.WriteLine();
+            console.MarkupLine("[grey]Not counted, because these usually only affect business PCs:[/]");
+            foreach (var issue in setAside)
+                console.MarkupLineInterpolated($"[grey]  • {issue.Title}[/]");
+        }
+
         foreach (var v in result.Verdicts.Where(v => v.Fixes.Count > 0))
             console.MarkupLineInterpolated($"[green]{v.Update.Kb} fixes {v.Fixes.Count} known problem(s).[/]");
 

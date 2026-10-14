@@ -16,6 +16,9 @@ public class WindowsIntegrationTests
     }
 
     [Fact]
+    public void Can_tell_whether_this_is_a_work_pc() => _ = SystemInfo.IsWorkPc();
+
+    [Fact]
     public void Data_lives_in_program_data() =>
         Assert.EndsWith(@"ProgramData\PatchLight", SystemInfo.DataDirectory, StringComparison.OrdinalIgnoreCase);
 

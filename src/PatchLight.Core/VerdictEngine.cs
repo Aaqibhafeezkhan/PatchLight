@@ -4,22 +4,25 @@ public static class VerdictEngine
 {
     public const int NewUpdateWaitDays = 3;
 
-    public static UpdateVerdict Judge(PendingUpdate update, IReadOnlyList<KnownIssue> issues, DateOnly today)
+    public static UpdateVerdict Judge(PendingUpdate update, IReadOnlyList<KnownIssue> issues, DateOnly today,
+        bool countBusinessIssues = true)
     {
-        var affecting = issues
+        var open = issues
             .Where(i => i.Status != IssueStatus.Resolved && Affects(i, update.Kb, update.Build))
             .ToList();
+        var setAside = countBusinessIssues ? [] : open.Where(i => i.LikelyBusinessOnly).ToList();
+        var affecting = open.Except(setAside).ToList();
         var fixes = update.Kb is null
             ? []
             : issues.Where(i => i.ResolvedByKb == update.Kb).ToList();
 
         var serious = affecting.Where(i => i.Status is IssueStatus.Confirmed or IssueStatus.Investigating).ToList();
         if (serious.Count > 0)
-            return new(update, Light.Red, Describe("Known problem", serious, affecting.Count), affecting, fixes);
+            return new(update, Light.Red, Describe("Known problem", serious, affecting.Count), affecting, fixes, setAside);
 
         if (affecting.Count > 0)
             return new(update, Light.Yellow, Describe("Known problem with a workaround", affecting, affecting.Count),
-                affecting, fixes);
+                affecting, fixes, setAside);
 
         if (update.IsOsUpdate && update.Released is { } released)
         {
@@ -27,11 +30,17 @@ public static class VerdictEngine
             if (age < NewUpdateWaitDays)
             {
                 var when = age <= 0 ? "Released today." : age == 1 ? "Released 1 day ago." : $"Released {age} days ago.";
-                return new(update, Light.Yellow, $"{when} Wait a few days in case problems show up.", affecting, fixes);
+                return new(update, Light.Yellow, $"{when} Wait a few days in case problems show up.", affecting, fixes, setAside);
             }
         }
 
-        return new(update, Light.Green, "No known problems.", affecting, fixes);
+        var safe = setAside.Count switch
+        {
+            0 => "No known problems.",
+            1 => "No known problems for home PCs. 1 problem usually only affects business PCs.",
+            _ => $"No known problems for home PCs. {setAside.Count} problems usually only affect business PCs.",
+        };
+        return new(update, Light.Green, safe, affecting, fixes, setAside);
     }
 
     // Cumulative OS updates carry every change from earlier builds on the same line,

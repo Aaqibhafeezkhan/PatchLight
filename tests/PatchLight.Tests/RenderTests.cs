@@ -81,4 +81,17 @@ public class RenderTests
         Assert.Contains("Paused KB5127648", text);
         Assert.Contains("Run patchlight as administrator", text);
     }
+
+    [Fact]
+    public void Says_how_many_business_problems_were_not_counted()
+    {
+        var issue = Issue(IssueStatus.Confirmed, title: "Domain-joined devices might lose trust") with { LikelyBusinessOnly = true };
+        var verdict = new UpdateVerdict(Update(), Light.Green, "No known problems for home PCs.", [], [], [issue]);
+        var result = new CheckResult([verdict], [], [], true, new IssueSnapshot([issue], Now, false), Now);
+
+        var text = Output(c => Render.Check(c, result, isAdmin: true));
+
+        Assert.Contains("Domain-joined devices might lose trust", text);
+        Assert.Contains("usually only affect business PCs", text);
+    }
 }

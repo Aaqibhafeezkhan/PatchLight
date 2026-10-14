@@ -20,6 +20,10 @@ public static class PatchLightHost
         http.DefaultRequestHeaders.UserAgent.ParseAdd($"PatchLight/0.2 (+{ProjectUrl})");
         var source = new ReleaseHealthSource(http, Path.Combine(data, "cache"), TimeProvider.System);
         return new PatchLightService(new WindowsUpdateClient(), source, new HoldStore(HoldsPath(data)),
-            TimeProvider.System, windowsVersion);
+            TimeProvider.System, windowsVersion)
+        {
+            // Home PCs set aside problems that usually only hit business PCs; the app lets people change this.
+            CountBusinessIssues = SystemInfo.IsWorkPc(),
+        };
     }
 }

@@ -7,12 +7,15 @@ public sealed class PatchLightService(
     TimeProvider time,
     string windowsVersion)
 {
+    // Off on home PCs: problems that usually only hit business PCs are listed but don't color the light.
+    public bool CountBusinessIssues { get; set; } = true;
+
     public async Task<CheckResult> CheckAsync(bool applyAutoRelease, CancellationToken ct)
     {
         var data = await issues.GetAsync(windowsVersion, ct);
         var pending = await updates.GetPendingAsync(ct);
         var now = time.GetUtcNow();
-        var verdicts = pending.Select(u => VerdictEngine.Judge(u, data.Issues, Today())).ToList();
+        var verdicts = pending.Select(u => VerdictEngine.Judge(u, data.Issues, Today(), CountBusinessIssues)).ToList();
 
         var active = new List<Hold>();
         var released = new List<ReleasedHold>();
@@ -80,7 +83,7 @@ public sealed class PatchLightService(
         try
         {
             var data = await issues.GetAsync(windowsVersion, ct);
-            issueIds = VerdictEngine.Judge(update, data.Issues, Today()).Issues.Select(i => i.Id).ToList();
+            issueIds = VerdictEngine.Judge(update, data.Issues, Today(), CountBusinessIssues).Issues.Select(i => i.Id).ToList();
         }
         catch (PatchLightException)
         {

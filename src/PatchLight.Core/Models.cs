@@ -36,7 +36,12 @@ public sealed record UpdateVerdict(
     Light Light,
     string Reason,
     IReadOnlyList<KnownIssue> Issues,
-    IReadOnlyList<KnownIssue> Fixes);
+    IReadOnlyList<KnownIssue> Fixes,
+    IReadOnlyList<KnownIssue>? SetAside = null)
+{
+    // Open problems that usually only hit business PCs, listed but not counted on this PC.
+    public IReadOnlyList<KnownIssue> SetAside { get; init; } = SetAside ?? [];
+}
 
 // IssueIds: the open problems that justified the pause. Older holds.json files don't have it.
 public sealed record Hold(
