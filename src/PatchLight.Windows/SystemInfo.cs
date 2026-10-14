@@ -24,6 +24,13 @@ public static class SystemInfo
         return new WindowsInfo(key.GetValue("DisplayVersion") as string, new Version(build, ubr), build >= 22000);
     }
 
+    // Windows Home ("Core", "CoreSingleLanguage", ...) ignores Windows Update policies like the deferral one.
+    public static bool IsHomeEdition()
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+        return key?.GetValue("EditionID") is string edition && edition.StartsWith("Core", StringComparison.OrdinalIgnoreCase);
+    }
+
     // Joined to a company domain or to Microsoft Entra (work or school account set up as the PC's owner).
     // Such PCs see every known issue; others set aside issues that usually only hit business PCs.
     public static bool IsWorkPc()
