@@ -6,6 +6,15 @@ public static class CliArgs
 {
     private const int MaxDays = 3650;
 
+    // "patchlight --no-news" is a check with an option, not a command called "--no-news".
+    public static string Command(string[] args)
+    {
+        if (args.Length == 0) return "check";
+        var first = args[0].ToLowerInvariant();
+        if (first is "--help" or "-h" or "/?") return first;
+        return first.StartsWith('-') ? "check" : first;
+    }
+
     public static int Days(string[] args, int fallback)
     {
         var i = Array.FindIndex(args, a => a.Equals("--days", StringComparison.OrdinalIgnoreCase));

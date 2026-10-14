@@ -86,7 +86,7 @@ paused, removes the daily check and "Start with Windows", and deletes its data i
 PatchLight doesn't collect, send or share anything about you or your PC. Over the network it only:
 - downloads Microsoft's public Windows release health pages (for your Windows version, and for any new version Windows offers you),
 - downloads the public news feeds of [Neowin](https://www.neowin.net/news/rss/) and [Windows Latest](https://www.windowslatest.com/feed/)
-  to spot reported problems (turn this off in Settings, or use `patchlight --no-news`),
+  to spot reported problems (turn this off in Settings, or run `patchlight --no-news`),
 - asks Windows Update on your own PC which updates are waiting.
 
 No account, no analytics, no server of ours. These sites see an ordinary download from your PC, nothing more.

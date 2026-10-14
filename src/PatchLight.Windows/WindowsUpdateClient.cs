@@ -26,7 +26,7 @@ public sealed class WindowsUpdateClient : IUpdateClient
         foreach (var (update, isUpgrade) in Offered(ct))
         {
             var pending = ToPending(update, isUpgrade);
-            if (pending is not null) list.Add(pending);
+            if (pending is not null && list.All(p => p.UpdateId != pending.UpdateId)) list.Add(pending);
         }
         return (IReadOnlyList<PendingUpdate>)list;
     }, ct);
@@ -80,16 +80,33 @@ public sealed class WindowsUpdateClient : IUpdateClient
         for (var i = 0; i < (int)regular.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
-            yield return (regular[i], false);
+            dynamic update = regular[i];
+            // Near the end of a version's support Windows can offer the upgrade as a regular update.
+            yield return (update, IsUpgrade(update));
         }
 
-        dynamic optional = searcher.Search(OptionalCriteria).Updates;
-        for (var i = 0; i < (int)optional.Count; i++)
+        foreach (var update in OptionalUpgrades(searcher, ct))
+            yield return (update, true);
+    }
+
+    // Upgrades offered as optional. Extra information: if this search fails, the regular updates still count.
+    private static List<dynamic> OptionalUpgrades(dynamic searcher, CancellationToken ct)
+    {
+        var upgrades = new List<dynamic>();
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            dynamic update = optional[i];
-            if (IsUpgrade(update)) yield return (update, true);
+            dynamic optional = searcher.Search(OptionalCriteria).Updates;
+            for (var i = 0; i < (int)optional.Count; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                dynamic update = optional[i];
+                if (IsUpgrade(update)) upgrades.Add(update);
+            }
         }
+        catch (Exception ex) when (ex is COMException or RuntimeBinderException)
+        {
+        }
+        return upgrades;
     }
 
     private static bool IsUpgrade(dynamic update)
@@ -109,7 +126,7 @@ public sealed class WindowsUpdateClient : IUpdateClient
         if (isUpgrade)
         {
             // Windows gives the upgrade the same KB as that month's security update, so it's known by its version.
-            var version = UpdateTitle.TryGetTargetVersion(title);
+            var version = UpdateTitle.VersionIn(title);
             return version is null ? null
                 : new PendingUpdate((string)update.Identity.UpdateID, null, title, null, null, (bool)update.IsHidden, version);
         }

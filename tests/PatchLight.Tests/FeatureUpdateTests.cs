@@ -136,6 +136,23 @@ public sealed class FeatureUpdateTests : IDisposable
     }
 
     [Fact]
+    public async Task Paused_upgrade_that_windows_stops_offering_keeps_its_pause_until_it_ends()
+    {
+        var (service, updates, issues) = Setup();
+        updates.Pending.Add(Upgrade());
+        issues.ByVersion["26H2"] = [Issue(IssueStatus.Confirmed) with { Id = "9" }];
+        await service.HoldAsync("26H2", 14, "Paused by you", CancellationToken.None);
+        updates.Pending.Clear();   // Microsoft pulled the offer for a while
+
+        var result = await service.CheckAsync(applyAutoRelease: true, CancellationToken.None);
+        Assert.Empty(result.Released);
+        Assert.Equal("26H2", Assert.Single(result.ActiveHolds).Kb);
+
+        time.Advance(TimeSpan.FromDays(15));
+        Assert.Equal(ReleaseReason.Expired, Assert.Single((await service.CheckAsync(true, CancellationToken.None)).Released).Reason);
+    }
+
+    [Fact]
     public void Card_offers_pause_by_version() =>
         Assert.Equal("26H2", Assert.Single(UpdateCard.Build(new CheckResult(
             [VerdictEngine.JudgeUpgrade(Upgrade(), [Issue(IssueStatus.Confirmed)], true)], [], [], false,

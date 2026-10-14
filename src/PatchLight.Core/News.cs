@@ -27,12 +27,16 @@ public static partial class NewsFeedParser
     [GeneratedRegex(@"KB\d{6,8}(?!\d)", RegexOptions.IgnoreCase)]
     private static partial Regex Kb();
 
-    [GeneratedRegex(@"\b(break|breaks|broke|broken|bugs?|buggy|issues?|problems?|fails?|failing|crash\w*|stutter\w*|errors?|black screen|BSOD|blue screen|freez\w*|hangs?|slow\w*|won't|can't|cannot)\b",
-        RegexOptions.IgnoreCase)]
+    // Words that say something broke. Bare "issues", "slow" and "fails" are left out: "Microsoft issues an update",
+    // "slowly rolling out" and "addresses issues" are good news.
+    [GeneratedRegex(@"\b(break|breaks|broke|broken|bugs?|buggy|fails to|failing|crash\w*|stutter\w*|errors?|black screen|BSOD|" +
+        @"blue screen|freez\w*|won't|can't|cannot|unable to|not working|stops? working|causing (issues|problems)|" +
+        @"(issues|problems) with)\b", RegexOptions.IgnoreCase)]
     private static partial Regex Problem();
 
-    // "KB5127648 fixes bugs" is good news.
-    [GeneratedRegex(@"\b(fixes|fixed|resolves|resolved)\b", RegexOptions.IgnoreCase)]
+    // "KB5127648 fixes bugs", "addresses issues", "emergency update for the bug": good news.
+    [GeneratedRegex(@"\b(fixes|fixed|fix for|resolves|resolved|addresses|patch(es|ed)?|out-of-band|emergency update)\b",
+        RegexOptions.IgnoreCase)]
     private static partial Regex Fixes();
 
     [GeneratedRegex(@"<[^>]+>")]
@@ -53,7 +57,8 @@ public static partial class NewsFeedParser
         var articles = new List<NewsArticle>();
         foreach (var item in document.Descendants("item"))
         {
-            var title = WebUtility.HtmlDecode(item.Element("title")?.Value ?? "").Trim();
+            // Curly apostrophes ("can’t") are common in feeds.
+            var title = WebUtility.HtmlDecode(item.Element("title")?.Value ?? "").Replace('\u2019', '\'').Trim();
             var url = item.Element("link")?.Value.Trim() ?? "";
             if (title.Length == 0 || !Uri.TryCreate(url, UriKind.Absolute, out _)) continue;
 

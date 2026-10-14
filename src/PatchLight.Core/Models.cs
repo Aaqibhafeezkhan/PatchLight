@@ -71,6 +71,10 @@ public sealed record Hold(
     [System.Text.Json.Serialization.JsonIgnore]
     public bool IsWaiting => UpdateId.Length == 0;
 
+    // A pause of an upgrade to a new Windows version, keyed by version ("26H2") instead of a KB number.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsUpgrade => Kb.Length == 4 && char.IsDigit(Kb[0]) && char.IsDigit(Kb[1]) && Kb[2] is 'H' && char.IsDigit(Kb[3]);
+
     // Lists compare by reference by default; a hold read back from disk should equal the one saved.
     public bool Equals(Hold? other) =>
         other is not null && Kb == other.Kb && UpdateId == other.UpdateId && HeldOn == other.HeldOn

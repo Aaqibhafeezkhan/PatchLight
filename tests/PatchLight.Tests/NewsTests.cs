@@ -48,6 +48,12 @@ public sealed class NewsTests : IDisposable
     [InlineData("Windows 11 KB5127648 fixes bugs related to audio", false)]
     [InlineData("Windows 11 KB5127648 is out with major changes", false)]
     [InlineData("I tested the October update: everything new, improved, and fixed", false)]
+    [InlineData("Microsoft issues emergency update KB5127700", false)]
+    [InlineData("Windows 11 KB5127648 is slowly rolling out", false)]
+    [InlineData("KB5127648 addresses File Explorer issues", false)]
+    [InlineData("Microsoft releases out-of-band update for KB5127648 bug", false)]
+    [InlineData("After KB5127648, some PCs can’t connect to Wi-Fi", true)]
+    [InlineData("KB5127648 is causing issues with printers", true)]
     public void Only_problem_reports_count(string title, bool problem) =>
         Assert.Equal(problem, NewsFeedParser.Parse(Feed((title, "KB5127648", Day)), "Example").Single().ReportsProblem);
 

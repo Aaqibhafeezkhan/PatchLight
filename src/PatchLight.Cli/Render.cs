@@ -135,6 +135,7 @@ public static class Render
         console.MarkupLine("  [bold]patchlight release KB5127648[/]    Resume a paused update");
         console.MarkupLine("  [bold]patchlight history[/]              Recent updates and which one likely broke something");
         console.MarkupLine("  [bold]patchlight uninstall KB5124008[/]  Remove an installed update and keep it paused until it's fixed");
+        console.MarkupLine("  [bold]patchlight --no-news[/]            Check without reading tech news sites");
         console.WriteLine();
         console.MarkupLine("[grey]Pausing, resuming and removing need a terminal opened as administrator.[/]");
     }

@@ -44,4 +44,12 @@ public class CliArgsTests
 
     [Fact]
     public void Days_allows_the_maximum() => Assert.Equal(3650, CliArgs.Days(["history", "--days", "3650"], 60));
+
+    [Theory]
+    [InlineData(new string[0], "check")]
+    [InlineData(new[] { "--no-news" }, "check")]
+    [InlineData(new[] { "hold", "KB5127648" }, "hold")]
+    [InlineData(new[] { "--help" }, "--help")]
+    public void Command_defaults_to_check_when_only_options_are_given(string[] args, string command) =>
+        Assert.Equal(command, CliArgs.Command(args));
 }

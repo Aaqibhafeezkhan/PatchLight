@@ -21,9 +21,12 @@ public static partial class UpdateTitle
     private static partial Regex VersionPattern();
 
     // "Windows 11, version 26H2" is an upgrade; "Cumulative Update for Windows 11, version 25H2 (KB...)" isn't.
-    public static string? TryGetTargetVersion(string title)
+    public static string? TryGetTargetVersion(string title) =>
+        KbPattern().IsMatch(title) || BuildPattern().IsMatch(title) ? null : VersionIn(title);
+
+    // For an update already known to be an upgrade, whatever else its title says.
+    public static string? VersionIn(string title)
     {
-        if (KbPattern().IsMatch(title) || BuildPattern().IsMatch(title)) return null;
         var match = VersionPattern().Match(title);
         return match.Success ? match.Groups[1].Value.ToUpperInvariant() : null;
     }

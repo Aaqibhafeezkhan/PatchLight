@@ -14,7 +14,7 @@ public static class CliApp
 
         try
         {
-            var command = args.Length == 0 ? "check" : args[0].ToLowerInvariant();
+            var command = CliArgs.Command(args);
             if (command is "help" or "--help" or "-h" or "/?")
             {
                 Render.Help(console);

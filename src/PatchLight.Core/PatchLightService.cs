@@ -56,7 +56,10 @@ public sealed class PatchLightService(
             // Without the new version's page we can't tell whether its problems were fixed.
             var unknown = verdict?.Update.IsFeatureUpdate == true && upgrades[verdict.Update.TargetVersion!] is null;
             ReleaseReason? reason =
-                verdict is null ? ReleaseReason.Gone
+                // Upgrade offers come and go (Microsoft pauses rollouts). Dropping the pause would leave the upgrade
+                // hidden when it comes back, so it lasts until it ends.
+                verdict is null && hold.IsUpgrade ? (now >= hold.ExpiresOn ? ReleaseReason.Expired : null)
+                : verdict is null ? ReleaseReason.Gone
                 : now >= hold.ExpiresOn ? ReleaseReason.Expired
                 : unknown ? null
                 // Decided by the problems recorded with the pause, not by the light, so the business setting
