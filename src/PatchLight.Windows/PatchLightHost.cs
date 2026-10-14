@@ -26,7 +26,7 @@ public static class PatchLightHost
     private static HttpClient NewHttpClient()
     {
         var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd($"PatchLight/0.4 (+{ProjectUrl})");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"PatchLight/0.5 (+{ProjectUrl})");
         return http;
     }
 

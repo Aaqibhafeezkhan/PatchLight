@@ -30,13 +30,13 @@ public static class DailyTask
           </RegistrationInfo>
           <Triggers>
             <CalendarTrigger>
-              <StartBoundary>2026-01-01T10:00:00</StartBoundary>
-              <Enabled>true</Enabled>
               <Repetition>
                 <Interval>{Every}</Interval>
                 <Duration>P1D</Duration>
                 <StopAtDurationEnd>false</StopAtDurationEnd>
               </Repetition>
+              <StartBoundary>2026-01-01T10:00:00</StartBoundary>
+              <Enabled>true</Enabled>
               <ScheduleByDay>
                 <DaysInterval>1</DaysInterval>
               </ScheduleByDay>

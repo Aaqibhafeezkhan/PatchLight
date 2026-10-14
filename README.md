@@ -27,7 +27,7 @@ Microsoft's own list of known problems and gives it a light:
 - **Traffic light in the tray.** The icon next to the clock is green, yellow or red, so you know at a glance.
 - **Tells you when something is wrong.** A notification appears when an update waiting on your PC has known problems.
 - **Pauses only the bad ones.** One click on **Pause** (Windows asks for permission) hides that update from Windows Update. Everything else keeps installing.
-- **Never blocks forever.** A daily automatic check resumes a paused update as soon as Microsoft fixes it, and every pause ends after 14 days (you can choose up to 35), because security updates matter.
+- **Never blocks forever.** An hourly automatic check resumes a paused update as soon as Microsoft fixes it, and every pause ends after 14 days (you can choose up to 35), because security updates matter.
 - **What broke my PC?** The History tab shows recent updates and marks the one most likely behind an open problem.
   One click on **Uninstall this update** removes it, and PatchLight keeps it paused until Microsoft fixes the problem.
 - **New Windows versions too.** When Windows offers an upgrade like "Windows 11, version 26H2", PatchLight checks it
@@ -36,6 +36,13 @@ Microsoft's own list of known problems and gives it a light:
   A report turns a safe update into 🟡 Wait (never 🔴), with a link to the article. You can turn this off in Settings.
 - **Only problems that matter to you.** Some known problems only hit company PCs (domains, virtual desktops, servers).
   On a home PC they're still listed but don't turn the light red. Company and school PCs count everything.
+- **Acts before Windows does (optional).** Once Windows has an update ready for your next restart, it installs it no matter
+  how you shut down. So PatchLight can act earlier, from **Settings → Protection**:
+  - **Pause red updates automatically**: the hourly check pauses updates with confirmed problems on its own.
+    Yellow updates and news reports never trigger it, and an update you resume stays resumed unless a new problem shows up.
+  - **Wait before installing new updates** (3, 7 or 14 days): new monthly updates rarely have known problems on day one,
+    so waiting gives problems time to show up. On Pro, Enterprise and Education this uses Windows' own deferral setting;
+    on Home, PatchLight pauses new updates until they're old enough.
 
 Windows 11 only. Free and open source. No account, no server, no tracking: your PC reads
 Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/windows/release-health/) pages directly.
@@ -49,7 +56,7 @@ Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/wi
 The files aren't code-signed yet, so Windows SmartScreen may warn you the first time. Choose **More info**, then **Run anyway**.
 
 Prefer no installer? `PatchLight-win-x64.zip` on the [downloads page](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest)
-is the same app. Unzip it to `C:\Program Files\PatchLight`: the daily check only runs PatchLight from a folder that only
+is the same app. Unzip it to `C:\Program Files\PatchLight`: the automatic check only runs PatchLight from a folder that only
 administrators can change, so other programs can't swap it for something else.
 
 ## Command line
@@ -75,13 +82,13 @@ patchlight uninstall KB5124008   Remove an installed update and keep it paused u
   After a restart Windows offers the update again, and PatchLight's check (it also runs 5 minutes after start-up) pauses it.
 - **Business-only problems:** recognized only by clear wording in Microsoft's description (domain-joined devices,
   Azure Virtual Desktop, Remote Desktop Services, Windows Server, IT-managed devices and similar). When in doubt, a problem counts.
-- **Daily check:** a scheduled task (`\PatchLight\Daily check` in Task Scheduler) runs `PatchLight.exe --background-check` as SYSTEM once a day. Its data folder, `C:\ProgramData\PatchLight`, can only be changed by administrators.
+- **Automatic check:** a scheduled task (`\PatchLight\Daily check` in Task Scheduler, named before it ran hourly) runs `PatchLight.exe --background-check` as SYSTEM every hour and 5 minutes after start-up. It also applies the Protection settings, kept in `C:\ProgramData\PatchLight\settings.json`. Its data folder, `C:\ProgramData\PatchLight`, can only be changed by administrators.
 - **Your settings:** `%LOCALAPPDATA%\PatchLight` (also the saved news reports, kept 30 days).
 
 ### Uninstall
 
 Open **Settings → Apps → Installed apps**, find PatchLight and choose **Uninstall**. It resumes every update PatchLight
-paused, removes the daily check and "Start with Windows", and deletes its data in `C:\ProgramData\PatchLight`.
+paused, removes the automatic check, the "wait" policy it set and "Start with Windows", and deletes its data in `C:\ProgramData\PatchLight`.
 
 ## Privacy
 
@@ -100,7 +107,9 @@ or the person installing or operating it.
 
 All of these are removed when you uninstall:
 - **Start with Windows** (if you choose it): one entry in your account's startup programs.
-- **Daily automatic check**: a task in Task Scheduler, `\PatchLight\Daily check`, turned on when you pause an update or in Settings.
+- **Automatic check**: a task in Task Scheduler, `\PatchLight\Daily check`, turned on when you pause an update, change Protection, or in Settings.
+- **Wait before installing new updates** (Pro and up, if you choose it): Windows Update's `DeferQualityUpdates` and
+  `DeferQualityUpdatesPeriodInDays` policy values. PatchLight never changes them if something else already set them.
 - **Paused updates**: hidden with Windows Update's own "hide this update" switch, never uninstalled or blocked.
 - **Data**: `C:\ProgramData\PatchLight` (pauses, a saved copy of Microsoft's page) and `%LOCALAPPDATA%\PatchLight` (your settings).
 

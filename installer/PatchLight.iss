@@ -54,9 +54,11 @@ Name: "{autoprograms}\PatchLight"; Filename: "{app}\PatchLight.exe"
 Name: "{autodesktop}\PatchLight"; Filename: "{app}\PatchLight.exe"; Tasks: desktopicon
 
 [Run]
+; An update from 0.4 or older: its once-a-day check becomes the hourly one (does nothing if there is none).
+Filename: "{app}\PatchLight.exe"; Parameters: "--refresh-daily-check"; Flags: runhidden waituntilterminated
 ; Opened as the person, not as administrator, so "Start with Windows" lands in their own account.
 Filename: "{app}\PatchLight.exe"; Description: "Open PatchLight"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [UninstallRun]
-; Resumes everything PatchLight paused, removes the daily check, "Start with Windows" and its data.
+; Resumes everything PatchLight paused, removes the automatic check, its "wait" policy, "Start with Windows" and its data.
 Filename: "{app}\PatchLight.exe"; Parameters: "--uninstall-cleanup"; Flags: runhidden waituntilterminated; RunOnceId: "PatchLightCleanup"
