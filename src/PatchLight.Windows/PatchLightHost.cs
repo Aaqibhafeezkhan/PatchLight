@@ -8,6 +8,7 @@ namespace PatchLight.Windows;
 public static class PatchLightHost
 {
     public const string ProjectUrl = "https://github.com/yo-gabriel-portfolio-here/PatchLight";
+    public const string AuthorUrl = "https://g4sbo.com";
 
     public static string HoldsPath(string dataDirectory) => Path.Combine(dataDirectory, "holds.json");
 

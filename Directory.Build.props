@@ -6,9 +6,9 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- One name and version for every file, so signed builds can be checked against them. -->
     <Product>PatchLight</Product>
-    <Company>PatchLight contributors</Company>
+    <Company>G4SBO</Company>
     <Copyright>MIT License</Copyright>
-    <Version>0.2.2</Version>
+    <Version>0.3.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 </Project>

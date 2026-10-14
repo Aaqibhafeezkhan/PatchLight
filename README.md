@@ -29,6 +29,9 @@ Microsoft's own list of known problems and gives it a light:
 - **Pauses only the bad ones.** One click on **Pause** (Windows asks for permission) hides that update from Windows Update. Everything else keeps installing.
 - **Never blocks forever.** A daily automatic check resumes a paused update as soon as Microsoft fixes it, and every pause ends after 14 days (you can choose up to 35), because security updates matter.
 - **What broke my PC?** The History tab shows recent updates and marks the one most likely behind an open problem.
+  One click on **Uninstall this update** removes it, and PatchLight keeps it paused until Microsoft fixes the problem.
+- **Only problems that matter to you.** Some known problems only hit company PCs (domains, virtual desktops, servers).
+  On a home PC they're still listed but don't turn the light red. Company and school PCs count everything.
 
 Windows 11 only. Free and open source. No account, no server, no tracking: your PC reads
 Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/windows/release-health/) pages directly.
@@ -54,12 +57,18 @@ patchlight                       Check the updates waiting on this PC
 patchlight hold KB5127648        Pause an update (needs administrator)
 patchlight release KB5127648     Resume it
 patchlight history               Which recent update likely broke something
+patchlight uninstall KB5124008   Remove an installed update and keep it paused until it's fixed (needs administrator)
 ```
 
 ## How it works
 
 - **Lights:** each pending update is matched with the known issues on Microsoft's release health page for your Windows version. Cumulative updates inherit open problems from the builds they build on.
 - **Pausing:** uses Windows Update's own "hide this update" switch, so nothing is uninstalled or blocked outside Windows Update.
+- **Uninstalling:** only when you ask. Windows cumulative updates are removed with DISM, other updates with `wusa`.
+  Windows can only remove its newest cumulative update; for older ones PatchLight points you to Settings > System > Recovery.
+  After a restart Windows offers the update again, and PatchLight's check (it also runs 5 minutes after start-up) pauses it.
+- **Business-only problems:** recognized only by clear wording in Microsoft's description (domain-joined devices,
+  Azure Virtual Desktop, Remote Desktop Services, Windows Server, IT-managed devices and similar). When in doubt, a problem counts.
 - **Daily check:** a scheduled task (`\PatchLight\Daily check` in Task Scheduler) runs `PatchLight.exe --background-check` as SYSTEM once a day. Its data folder, `C:\ProgramData\PatchLight`, can only be changed by administrators.
 - **Your settings:** `%LOCALAPPDATA%\PatchLight`.
 
@@ -110,4 +119,4 @@ dotnet run --project src/PatchLight.Cli
 
 ## License
 
-MIT
+MIT. Made by [G4SBO](https://g4sbo.com).

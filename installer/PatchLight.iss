@@ -13,8 +13,8 @@ AppVerName=PatchLight {#AppVersion}
 VersionInfoProductName=PatchLight
 VersionInfoVersion={#AppVersion}
 VersionInfoDescription=PatchLight installer
-AppPublisher=PatchLight contributors
-AppPublisherURL=https://github.com/yo-gabriel-portfolio-here/PatchLight
+AppPublisher=G4SBO
+AppPublisherURL=https://g4sbo.com
 AppSupportURL=https://github.com/yo-gabriel-portfolio-here/PatchLight/issues
 ; Program Files: only administrators can change it, which the daily check needs.
 DefaultDirName={autopf}\PatchLight

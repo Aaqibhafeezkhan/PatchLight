@@ -14,7 +14,11 @@ public static class DemoData
         var updates = new DemoUpdateClient();
         var holdsPath = Path.Combine(Path.GetTempPath(), "patchlight-demo", "holds.json");
         if (File.Exists(holdsPath)) File.Delete(holdsPath);
-        var service = new PatchLightService(updates, new DemoIssueSource(), new HoldStore(holdsPath), TimeProvider.System, "25H2");
+        // The demo plays a home PC: problems that only hit business PCs are listed but not counted.
+        var service = new PatchLightService(updates, new DemoIssueSource(), new HoldStore(holdsPath), TimeProvider.System, "25H2")
+        {
+            CountBusinessIssues = false,
+        };
         return (service, new DemoActions(service));
     }
 
@@ -38,6 +42,9 @@ public static class DemoData
                 Issue("1003", "USB audio devices might stop working",
                     "Some USB headsets and speakers stop playing sound until they are reconnected.",
                     "KB5124008", "26200.9550", 35, IssueStatus.Confirmed),
+                Issue("1004", "Domain-joined devices might fail to sign in with Windows Hello",
+                    "Some PCs joined to an on-premises Active Directory domain can't sign in with a PIN.",
+                    "KB5127648", "26200.9711", 5, IssueStatus.Confirmed) with { LikelyBusinessOnly = true },
             ], DateTimeOffset.UtcNow, FromCache: false));
     }
 

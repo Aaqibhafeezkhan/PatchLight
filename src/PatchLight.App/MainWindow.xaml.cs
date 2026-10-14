@@ -4,6 +4,7 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Media;
 using PatchLight.Core;
@@ -95,10 +96,10 @@ public sealed partial class MainWindow : Window
             return;
         }
         if (controller.Cards.Count == 0)
-        {
             PageContent.Children.Add(Note("Nothing is waiting to install. You're up to date."));
-            return;
-        }
+        foreach (var hold in controller.Result.ActiveHolds.Where(h => h.IsWaiting))
+            PageContent.Children.Add(Note($"You removed {hold.Kb}. When Windows offers it again, PatchLight pauses it " +
+                $"until Microsoft fixes it (until {hold.ExpiresOn.ToLocalTime():MMM d} at the latest)."));
         foreach (var card in controller.Cards) PageContent.Children.Add(UpdateCardView(card));
     }
 
@@ -135,6 +136,16 @@ public sealed partial class MainWindow : Window
             link.Inlines.Add(new Run { Text = "Read Microsoft's note" });
             line.Inlines.Add(link);
             body.Children.Add(line);
+        }
+
+        if (card.SetAside.Count > 0)
+        {
+            body.Children.Add(new TextBlock
+            {
+                Text = "Not counted, because these usually only affect business PCs:", Foreground = Secondary(),
+                Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap,
+            });
+            foreach (var issue in card.SetAside) body.Children.Add(IssueLine(issue, Secondary()));
         }
 
         if (card.FixCount > 0)
@@ -216,19 +227,80 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                body.Children.Add(new TextBlock { Text = "Likely cause of:", Foreground = Brush(RedColor), FontWeight = FontWeights.SemiBold });
-                foreach (var issue in item.Issues)
+                var counted = controller.CountBusinessIssues ? item.Issues : item.Issues.Where(i => !i.LikelyBusinessOnly).ToList();
+                var aside = item.Issues.Except(counted).ToList();
+                if (counted.Count > 0)
                 {
-                    var line = new TextBlock { TextWrapping = TextWrapping.Wrap };
-                    line.Inlines.Add(new Run { Text = "• " + issue.Title + " " });
-                    var link = new Hyperlink { NavigateUri = new Uri(issue.Url) };
-                    link.Inlines.Add(new Run { Text = "Read Microsoft's note" });
-                    line.Inlines.Add(link);
-                    body.Children.Add(line);
+                    body.Children.Add(new TextBlock { Text = "Likely cause of:", Foreground = Brush(RedColor), FontWeight = FontWeights.SemiBold });
+                    foreach (var issue in counted) body.Children.Add(IssueLine(issue, null));
+                }
+                if (aside.Count > 0)
+                {
+                    body.Children.Add(new TextBlock
+                    {
+                        Text = "Linked to problems that usually only affect business PCs:", Foreground = Secondary(),
+                        TextWrapping = TextWrapping.Wrap,
+                    });
+                    foreach (var issue in aside) body.Children.Add(IssueLine(issue, Secondary()));
+                }
+                if (counted.Count > 0 && item.Update.Kb is { } kb)
+                {
+                    var remove = new Button { Content = "Uninstall this update", Margin = new Thickness(0, 6, 0, 0) };
+                    remove.Click += async (_, _) => await UninstallAsync(remove, kb);
+                    body.Children.Add(remove);
                 }
             }
             PageContent.Children.Add(Card(body));
         }
+    }
+
+    private async Task UninstallAsync(Button button, string kb)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            Title = $"Uninstall {kb}?",
+            Content = new TextBlock
+            {
+                TextWrapping = TextWrapping.Wrap,
+                Text = "This also removes the security fixes that came with it, so only do it if this problem really affects you.\n\n" +
+                    $"PatchLight keeps {kb} paused until Microsoft fixes the problem (up to {controller.State.PauseDays} days), " +
+                    "then Windows installs it again. Windows asks for permission, it can take a few minutes, " +
+                    "and your PC needs to restart to finish.",
+            },
+            PrimaryButtonText = "Uninstall",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+
+        button.IsEnabled = false;
+        button.Content = "Uninstalling...";
+        var result = await controller.UninstallAsync(kb);
+        button.Content = "Uninstall this update";
+        button.IsEnabled = !result.Succeeded;
+        if (!result.Succeeded)
+        {
+            Show(InfoBarSeverity.Warning, result.Message!);
+            return;
+        }
+        var restart = new Button { Content = "Restart now" };
+        restart.Click += (_, _) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            Path.Combine(Environment.SystemDirectory, "shutdown.exe"), "/r /t 0") { CreateNoWindow = true, UseShellExecute = false });
+        Show(result.Message is null ? InfoBarSeverity.Success : InfoBarSeverity.Warning,
+            result.Message ?? $"Removed {kb}. Restart your PC to finish. Save your work first.", restart);
+    }
+
+    private static TextBlock IssueLine(KnownIssue issue, Brush? color)
+    {
+        var line = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        var title = new Run { Text = "• " + issue.Title + " " };
+        if (color is not null) title.Foreground = color;
+        line.Inlines.Add(title);
+        var link = new Hyperlink { NavigateUri = new Uri(issue.Url) };
+        link.Inlines.Add(new Run { Text = "Read Microsoft's note" });
+        line.Inlines.Add(link);
+        return line;
     }
 
     // ---- Settings ----
@@ -253,6 +325,13 @@ public sealed partial class MainWindow : Window
         dailyPanel.Children.Add(dailyText);
         PageContent.Children.Add(Card(dailyPanel));
 
+        var business = new ToggleSwitch { Header = "Count problems that usually only affect business PCs", IsOn = controller.CountBusinessIssues };
+        business.Toggled += async (_, _) => await controller.SetCountBusinessIssuesAsync(business.IsOn);
+        PageContent.Children.Add(Card(Section(business,
+            "Some of Microsoft's known problems only hit PCs run by a company: joined to a domain, virtual desktops, " +
+            "servers or IT-managed devices. On a home PC they're still listed but don't change the light. " +
+            "Turn this on if this PC belongs to a company or school.")));
+
         var days = new NumberBox
         {
             Header = "Pause updates for (days)", Minimum = 1, Maximum = HoldPolicy.MaxDays, Value = controller.State.PauseDays,
@@ -272,6 +351,7 @@ public sealed partial class MainWindow : Window
             Text = "Free and open source. Data comes straight from Microsoft's public Windows release health pages. No account, no server, no tracking.",
             TextWrapping = TextWrapping.Wrap, Foreground = Secondary(),
         });
+        about.Children.Add(new HyperlinkButton { Content = "Made by G4SBO", NavigateUri = new Uri(PatchLightHost.AuthorUrl), Padding = new Thickness(0) });
         about.Children.Add(new HyperlinkButton { Content = "Project page on GitHub", NavigateUri = new Uri(PatchLightHost.ProjectUrl), Padding = new Thickness(0) });
         PageContent.Children.Add(Card(about));
 
@@ -302,7 +382,7 @@ public sealed partial class MainWindow : Window
         var lastRun = controller.DailyCheckLastRunText();
         return state switch
         {
-            DailyCheckState.Moved => "PatchLight was moved to another folder. Turn the daily check off and on again so Windows finds it.",
+            DailyCheckState.Moved => "PatchLight was moved to another folder, so the daily check can't find it. Turn it on again.",
             DailyCheckState.On => lastRun.Length > 0 ? lastRun : "On. It hasn't run yet.",
             _ => "Off. Paused updates then stay paused until you press Resume.",
         };
@@ -310,10 +390,11 @@ public sealed partial class MainWindow : Window
 
     // ---- Helpers ----
 
-    private void Show(InfoBarSeverity severity, string text)
+    private void Show(InfoBarSeverity severity, string text, ButtonBase? action = null)
     {
         Message.Severity = severity;
         Message.Message = text;
+        Message.ActionButton = action;
         Message.IsOpen = true;
     }
 
