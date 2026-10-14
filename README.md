@@ -12,8 +12,7 @@ Microsoft's own list of known problems and gives it a light:
 | 🟡 Wait | A problem with a workaround, or it came out less than 3 days ago. |
 | 🔴 Problems | Microsoft confirmed it breaks something. Pause it. |
 
-Pause only the bad ones. PatchLight resumes them as soon as Microsoft fixes them,
-and never pauses anything for more than 35 days, because security updates matter.
+Pause only the bad ones. Each time you run `patchlight` as administrator, it resumes paused updates that Microsoft has fixed, and nothing stays paused for more than 35 days, because security updates matter. (An automatic daily check is coming with the Windows app.)
 
 ## Use it
 
