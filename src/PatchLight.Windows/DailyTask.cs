@@ -91,9 +91,44 @@ public static class DailyTask
         return xml is null || !string.Equals(CommandFromXml(xml), exePath, StringComparison.OrdinalIgnoreCase) || !IsCurrent(xml);
     }
 
+    // Task Scheduler hides PatchLight's task folder from normal users, so whoever registers the task (always an
+    // administrator) leaves a copy here for the app to read. Only administrators can change this folder.
+    public static string SavedCopyPath => Path.Combine(SystemInfo.DataDirectory, "daily-task.xml");
+
+    public static string? ChooseXml(string? fromScheduler, string? savedCopy, bool elevated) =>
+        fromScheduler ?? (elevated ? null : savedCopy);
+
+    // The task as the app can best tell, without administrator rights.
+    public static string? VisibleXml()
+    {
+        string? copy = null;
+        try
+        {
+            if (File.Exists(SavedCopyPath)) copy = File.ReadAllText(SavedCopyPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+        return ChooseXml(RegisteredXml(), copy, SystemInfo.IsAdministrator());
+    }
+
     public static void EnsureRegistered(string exePath)
     {
         if (NeedsRegister(exePath)) Register(exePath);
+        else if (!File.Exists(SavedCopyPath)) SaveCopy(exePath);
+    }
+
+    private static void SaveCopy(string exePath)
+    {
+        try
+        {
+            Directory.CreateDirectory(SystemInfo.DataDirectory);
+            File.WriteAllText(SavedCopyPath, BuildXml(exePath));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The task runs anyway; the app may just show it as off.
+        }
     }
 
     public static string? CommandFromXml(string xml)
@@ -120,7 +155,8 @@ public static class DailyTask
             // schtasks wants the file in UTF-16, matching the XML declaration.
             File.WriteAllText(file, BuildXml(exePath), Encoding.Unicode);
             if (Schtasks("/Create", "/TN", Name, "/XML", file, "/F").ExitCode != 0)
-                throw new PatchLightException("Couldn't turn on the daily check.");
+                throw new PatchLightException("Couldn't turn on the automatic check.");
+            SaveCopy(exePath);
         }
         finally
         {
@@ -130,9 +166,15 @@ public static class DailyTask
 
     public static void Unregister()
     {
-        if (RegisteredExePath() is null) return;
-        if (Schtasks("/Delete", "/TN", Name, "/F").ExitCode != 0)
-            throw new PatchLightException("Couldn't turn off the daily check.");
+        if (RegisteredExePath() is not null && Schtasks("/Delete", "/TN", Name, "/F").ExitCode != 0)
+            throw new PatchLightException("Couldn't turn off the automatic check.");
+        try
+        {
+            File.Delete(SavedCopyPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     // The program the task runs, or null when the task doesn't exist.

@@ -45,6 +45,18 @@ public class DailyTaskTests
     }
 
     [Fact]
+    public void App_without_admin_rights_falls_back_to_the_saved_copy()
+    {
+        var xml = DailyTask.BuildXml(@"C:\X\PatchLight.exe");
+        // Task Scheduler hides PatchLight's task folder from normal users.
+        Assert.Equal(xml, DailyTask.ChooseXml(fromScheduler: null, savedCopy: xml, elevated: false));
+        Assert.Equal("scheduler", DailyTask.ChooseXml("scheduler", xml, elevated: false));
+        // As administrator Task Scheduler's answer is the truth, so a stale copy can't stop a re-register.
+        Assert.Null(DailyTask.ChooseXml(fromScheduler: null, savedCopy: xml, elevated: true));
+        Assert.Null(DailyTask.ChooseXml(null, null, elevated: false));
+    }
+
+    [Fact]
     public void Odd_characters_in_the_path_are_escaped()
     {
         var path = @"C:\Tools & <Stuff>\PatchLight.exe";

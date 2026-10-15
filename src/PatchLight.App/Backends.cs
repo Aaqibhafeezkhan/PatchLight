@@ -13,7 +13,7 @@ public static class Backends
         {
             Service = PatchLightHost.CreateService(Program.RequireWindows11()),
             Actions = new RunAsAdministrator(),
-            GetDailyCheckAsync = () => Task.Run(() => DailyTask.RegisteredXml() switch
+            GetDailyCheckAsync = () => Task.Run(() => DailyTask.VisibleXml() switch
             {
                 null => DailyCheckState.Off,
                 var xml when !string.Equals(DailyTask.CommandFromXml(xml), exe, StringComparison.OrdinalIgnoreCase) => DailyCheckState.Moved,

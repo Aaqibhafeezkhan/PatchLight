@@ -75,6 +75,7 @@ public static class Program
     {
         try
         {
+            DataFolder.Secure(SystemInfo.DataDirectory);
             DailyTask.EnsureRegistered(Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file."));
             return 0;
         }
