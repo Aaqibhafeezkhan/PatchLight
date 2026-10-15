@@ -18,27 +18,27 @@ Microsoft's own list of known problems and gives it a light:
 
 ![PatchLight: a red light for an update with known problems, one click on Pause, the light turns yellow, then History shows which update likely broke something](docs/images/demo.gif)
 
-*(Screenshot of demo mode with made-up updates. Run `PatchLight.exe --demo` to try it without touching anything.)*
+*(GIF of demo mode with made-up updates. Run `PatchLight.exe --demo` to try it without touching anything.)*
 
 ## What it does
 
-- **Traffic light in the tray.** The icon next to the clock is green, yellow or red, so you know at a glance.
-- **Tells you when something is wrong.** A notification appears when an update waiting on your PC has known problems.
-- **Pauses only the bad ones.** One click on **Pause** (Windows asks for permission) hides that update from Windows Update. Everything else keeps installing.
-- **Never blocks forever.** An hourly automatic check resumes a paused update as soon as Microsoft fixes it, and every pause ends after 14 days (you can choose up to 35), because security updates matter.
+- **Traffic light:** The icon next to the clock is green, yellow or red, so you know right away.
+- **Tells you when something is wrong:** A notification appears when an update waiting on your PC has known problems.
+- **Pauses only the bad ones:** One click on **Pause** (Windows asks for permission) hides that update from Windows Update. Everything else keeps installing.
+- **Never blocks forever:** An hourly automatic check resumes a paused update as soon as Microsoft fixes it, and every pause ends after 14 days (you can choose up to 35), because security updates matter.
 - **What broke my PC?** The History tab shows recent updates and marks the one most likely behind an open problem.
   One click on **Uninstall this update** removes it, and PatchLight keeps it paused until Microsoft fixes the problem.
-- **New Windows versions too.** When Windows offers an upgrade like "Windows 11, version 26H2", PatchLight checks it
+- **New Windows versions too:** When Windows offers an upgrade like "Windows 11, version 26H2", PatchLight checks it
   against Microsoft's known issues for that version, so you know whether to wait.
-- **Early warnings from tech news.** Problems often show up on Neowin and Windows Latest days before Microsoft lists them.
+- **Early warnings from tech news:** Problems often show up on Neowin and Windows Latest days before Microsoft lists them.
   A report turns a safe update into 🟡 Wait (never 🔴), with a link to the article. You can turn this off in Settings.
-- **Only problems that matter to you.** Some known problems only hit company PCs (domains, virtual desktops, servers).
+- **Only problems that matter to you:** Some known problems only hit company PCs (domains, virtual desktops, servers).
   On a home PC they're still listed but don't turn the light red. Company and school PCs count everything.
-- **Acts before Windows does.** Once Windows has an update ready for your next restart, it installs it no matter
+- **Acts before Windows does:** Once Windows has an update ready for your next restart, it installs it no matter
   how you shut down. So PatchLight acts earlier (change it in **Settings → Protection**):
-  - **Pause red updates automatically** (on by default): the hourly check pauses updates with confirmed problems on its own.
+  - **Pause red updates automatically:** (on by default): the hourly check pauses updates with confirmed problems on its own.
     Yellow updates and news reports never trigger it, and an update you resume stays resumed unless a new problem shows up.
-  - **Wait before installing new updates** (off by default; 3, 7 or 14 days): new monthly updates rarely have known problems on day one,
+  - **Wait before installing new updates:** (off by default; 3, 7 or 14 days): new monthly updates rarely have known problems on day one,
     so waiting gives problems time to show up. On Pro, Enterprise and Education this uses Windows' own deferral setting;
     on Home, PatchLight pauses new updates until they're old enough.
 
@@ -48,7 +48,7 @@ Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/wi
 ## Get it
 
 1. Download **[PatchLight-Setup.exe](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** and open it.
-2. Windows asks for permission, then PatchLight installs and opens. Find it later in the Start menu.
+2. Windows asks for permission, then PatchLight installs and opens. After that you can find it later in the Start menu.
 3. The installer asks whether PatchLight should start with Windows (it then waits in the tray). You can change that any time in **Settings**.
 
 The files aren't code-signed yet, so Windows SmartScreen may warn you the first time. Choose **More info**, then **Run anyway**.
@@ -59,7 +59,7 @@ administrators can change, so other programs can't swap it for something else.
 
 ## Command line
 
-There is also a single-file `patchlight.exe` for the terminal:
+There is also a single-file `patchlight.exe` in case you would like to use it from the terminal:
 
 ```
 patchlight                       Check the updates waiting on this PC
@@ -98,8 +98,7 @@ PatchLight doesn't collect, send or share anything about you or your PC. Over th
 
 No account, no analytics, no server of ours. Like any app that reads a web page, these downloads show the sites your
 IP address and that the request comes from PatchLight. Nothing about you, your PC or your updates is sent.
-This program will not transfer any information to other networked systems unless specifically requested by the user
-or the person installing or operating it.
+This program will not transfer any information to others.
 
 ### What PatchLight changes on your PC
 
@@ -119,8 +118,8 @@ Every download is built by [GitHub Actions](.github/workflows/release.yml) from 
 release is approved by hand before it is signed.
 
 Team roles:
-- Committers and reviewers: [yo-gabriel-portfolio-here](https://github.com/yo-gabriel-portfolio-here)
-- Approvers: [yo-gabriel-portfolio-here](https://github.com/yo-gabriel-portfolio-here)
+- Committers and reviewers: [G4SBO](https://github.com/G4SBO)
+- Approvers: [G4SBO](https://github.com/G4SBO)
 
 See [Privacy](#privacy) for what the program does over the network.
 
