@@ -486,3 +486,6 @@ dist/
 
 # winget manifests made by scripts/winget-manifest.ps1 (they go to microsoft/winget-pkgs, not here)
 winget/
+
+# Local planning notes
+docs/superpowers/
