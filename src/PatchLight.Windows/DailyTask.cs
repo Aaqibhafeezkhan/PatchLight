@@ -17,8 +17,9 @@ public static class DailyTask
     public const string Name = @"\PatchLight\Daily check";
     public const string Argument = "--background-check";
 
-    // Run by the installer as administrator: brings an existing task up to date, never creates one.
-    public const string RefreshArgument = "--refresh-daily-check";
+    // Run by the installer as administrator: turns the automatic check on (automatic pausing is on by default and
+    // needs it) and brings a task from an older version up to date.
+    public const string SetupArgument = "--setup-daily-check";
     private const string Every = "PT1H";
 
     public static string BuildXml(string exePath) => $"""
@@ -90,10 +91,9 @@ public static class DailyTask
         return xml is null || !string.Equals(CommandFromXml(xml), exePath, StringComparison.OrdinalIgnoreCase) || !IsCurrent(xml);
     }
 
-    // Brings an existing task up to date; does nothing when there is none.
-    public static void Refresh(string exePath)
+    public static void EnsureRegistered(string exePath)
     {
-        if (RegisteredXml() is not null) Register(exePath);
+        if (NeedsRegister(exePath)) Register(exePath);
     }
 
     public static string? CommandFromXml(string xml)

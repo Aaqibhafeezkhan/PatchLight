@@ -153,7 +153,7 @@ public sealed class BackgroundCheckTests : IDisposable
     }
 
     [Fact]
-    public async Task Damaged_settings_change_nothing()
+    public async Task Damaged_settings_use_the_defaults()
     {
         var holds = new HoldStore(Path.Combine(dir, "holds.json"));
         Directory.CreateDirectory(dir);
@@ -165,9 +165,10 @@ public sealed class BackgroundCheckTests : IDisposable
         var log = await BackgroundCheck.RunAsync(Service(issues, holds), LogPath, time, CancellationToken.None,
             new ProtectionStore(Path.Combine(dir, "settings.json")), waitWithHolds: true);
 
-        Assert.Empty(log.Paused);
+        // Auto-pause is on by default; the wait is off.
+        Assert.Equal(["KB5127648"], log.Paused);
         Assert.Null(log.Error);
-        Assert.Empty(updates.HideCalls);
+        Assert.Equal(PatchLightService.AutoReason, Assert.Single(holds.Load()).Reason);
     }
 
     [Fact]

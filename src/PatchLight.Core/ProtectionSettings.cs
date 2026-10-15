@@ -11,10 +11,11 @@ public sealed record LetThrough(string Kb, IReadOnlyList<string> IssueIds)
 }
 
 // What the background check does on its own, for everyone on this PC. Only administrators can change it.
+// AutoPauseRed is on unless the person turns it off: someone who installs PatchLight wants bad updates stopped.
 // WaitDays: how old a new Windows update must be before Windows may install it (0 = off).
 // OwnsDeferPolicy: PatchLight wrote Windows' own deferral policy, so it may remove it again.
 public sealed record ProtectionSettings(
-    bool AutoPauseRed = false,
+    bool AutoPauseRed = true,
     int WaitDays = 0,
     int PauseDays = HoldPolicy.DefaultDays,
     bool OwnsDeferPolicy = false,

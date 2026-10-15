@@ -54,8 +54,9 @@ Name: "{autoprograms}\PatchLight"; Filename: "{app}\PatchLight.exe"
 Name: "{autodesktop}\PatchLight"; Filename: "{app}\PatchLight.exe"; Tasks: desktopicon
 
 [Run]
-; An update from 0.4 or older: its once-a-day check becomes the hourly one (does nothing if there is none).
-Filename: "{app}\PatchLight.exe"; Parameters: "--refresh-daily-check"; Flags: runhidden waituntilterminated
+; Turns the hourly automatic check on (automatic pausing of red updates is on by default and needs it);
+; a once-a-day check from 0.4 or older becomes the hourly one.
+Filename: "{app}\PatchLight.exe"; Parameters: "--setup-daily-check"; Flags: runhidden waituntilterminated
 ; Opened as the person, not as administrator, so "Start with Windows" lands in their own account.
 Filename: "{app}\PatchLight.exe"; Description: "Open PatchLight"; Flags: nowait postinstall skipifsilent runasoriginaluser
 

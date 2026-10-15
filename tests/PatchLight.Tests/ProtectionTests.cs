@@ -59,7 +59,7 @@ public sealed class ProtectionTests : IDisposable
         updates.Pending.Add(Update(released: new DateOnly(2026, 10, 12)));
         issues.Issues.Add(Issue(IssueStatus.Confirmed));
 
-        var outcome = await Protect(new ProtectionSettings(), waitWithHolds: true);
+        var outcome = await Protect(new ProtectionSettings(AutoPauseRed: false), waitWithHolds: true);
 
         Assert.Empty(outcome.Paused);
         Assert.Empty(updates.HideCalls);

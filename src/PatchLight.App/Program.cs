@@ -19,7 +19,7 @@ public static class Program
         // Headless modes: the daily task (as SYSTEM) and the "Run as administrator" helper.
         if (args.Contains(DailyTask.Argument)) return RunBackgroundCheck();
         if (args.Contains(UninstallArgument)) return RunUninstallCleanup();
-        if (args.Contains(DailyTask.RefreshArgument)) return RunRefreshDailyCheck();
+        if (args.Contains(DailyTask.SetupArgument)) return RunSetupDailyCheck();
         if (ElevatedCommand.Parse(args) is { } command) return RunElevated(command);
 
         var demo = args.Contains("--demo");
@@ -69,12 +69,13 @@ public static class Program
         return 0;
     }
 
-    // Run by the installer after an update, so an older daily task becomes the hourly one.
-    private static int RunRefreshDailyCheck()
+    // Run by the installer: the automatic check is on from the start (automatic pausing needs it), and an older
+    // once-a-day task becomes the hourly one.
+    private static int RunSetupDailyCheck()
     {
         try
         {
-            DailyTask.Refresh(Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file."));
+            DailyTask.EnsureRegistered(Environment.ProcessPath ?? throw new PatchLightException("Couldn't find PatchLight's own program file."));
             return 0;
         }
         catch (Exception ex)

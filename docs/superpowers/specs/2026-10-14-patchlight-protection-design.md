@@ -103,3 +103,7 @@ A new card "Protection" above the existing toggles:
 - Cancelling an update that is already staged (no reliable way; tested).
 - Auto-pausing yellow updates.
 - Feature upgrades (26H2) for the wait setting: they're already optional and judged separately.
+
+## Change after review (2026-10-14)
+
+LO decided auto-pause is **on by default** (someone who installs PatchLight wants bad updates stopped). The installer runs `--setup-daily-check`, which turns the hourly task on, because auto-pause needs it. The wait setting stays off by default.

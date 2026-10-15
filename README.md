@@ -36,11 +36,11 @@ Microsoft's own list of known problems and gives it a light:
   A report turns a safe update into 🟡 Wait (never 🔴), with a link to the article. You can turn this off in Settings.
 - **Only problems that matter to you.** Some known problems only hit company PCs (domains, virtual desktops, servers).
   On a home PC they're still listed but don't turn the light red. Company and school PCs count everything.
-- **Acts before Windows does (optional).** Once Windows has an update ready for your next restart, it installs it no matter
-  how you shut down. So PatchLight can act earlier, from **Settings → Protection**:
-  - **Pause red updates automatically**: the hourly check pauses updates with confirmed problems on its own.
+- **Acts before Windows does.** Once Windows has an update ready for your next restart, it installs it no matter
+  how you shut down. So PatchLight acts earlier (change it in **Settings → Protection**):
+  - **Pause red updates automatically** (on by default): the hourly check pauses updates with confirmed problems on its own.
     Yellow updates and news reports never trigger it, and an update you resume stays resumed unless a new problem shows up.
-  - **Wait before installing new updates** (3, 7 or 14 days): new monthly updates rarely have known problems on day one,
+  - **Wait before installing new updates** (off by default; 3, 7 or 14 days): new monthly updates rarely have known problems on day one,
     so waiting gives problems time to show up. On Pro, Enterprise and Education this uses Windows' own deferral setting;
     on Home, PatchLight pauses new updates until they're old enough.
 
@@ -107,7 +107,7 @@ or the person installing or operating it.
 
 All of these are removed when you uninstall:
 - **Start with Windows** (if you choose it): one entry in your account's startup programs.
-- **Automatic check**: a task in Task Scheduler, `\PatchLight\Daily check`, turned on when you pause an update, change Protection, or in Settings.
+- **Automatic check**: a task in Task Scheduler, `\PatchLight\Daily check`, turned on by the installer (and when you pause an update or change Protection); you can turn it off in Settings.
 - **Wait before installing new updates** (Pro and up, if you choose it): Windows Update's `DeferQualityUpdates` and
   `DeferQualityUpdatesPeriodInDays` policy values. PatchLight never changes them if something else already set them.
 - **Paused updates**: hidden with Windows Update's own "hide this update" switch, never uninstalled or blocked.

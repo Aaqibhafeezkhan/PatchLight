@@ -13,10 +13,10 @@ public sealed class ProtectionSettingsTests : IDisposable
     }
 
     [Fact]
-    public void Missing_file_means_everything_off()
+    public void Missing_file_means_auto_pause_on_and_no_wait()
     {
         var s = new ProtectionStore(FilePath).Load();
-        Assert.False(s.AutoPauseRed);
+        Assert.True(s.AutoPauseRed);
         Assert.Equal(0, s.WaitDays);
         Assert.Equal(HoldPolicy.DefaultDays, s.PauseDays);
         Assert.False(s.OwnsDeferPolicy);
@@ -24,7 +24,7 @@ public sealed class ProtectionSettingsTests : IDisposable
     }
 
     [Fact]
-    public void Damaged_file_means_everything_off()
+    public void Damaged_file_means_the_defaults()
     {
         Directory.CreateDirectory(dir);
         File.WriteAllText(FilePath, "{ nope");
