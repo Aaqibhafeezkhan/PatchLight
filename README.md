@@ -1,5 +1,3 @@
-<p align="center"><img src="docs/images/logo.png" width="96" alt="PatchLight logo"></p>
-
 # PatchLight 🟢🟡🔴
 
 **Know if a Windows update is safe before you install it.**
