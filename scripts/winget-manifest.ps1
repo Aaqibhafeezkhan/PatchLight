@@ -4,7 +4,7 @@
 param([Parameter(Mandatory)] [string] $Version)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$url = "https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/download/v$Version/PatchLight-Setup.exe"
+$url = "https://github.com/G4SBO/PatchLight/releases/download/v$Version/PatchLight-Setup.exe"
 $temp = Join-Path ([IO.Path]::GetTempPath()) "PatchLight-Setup-$Version.exe"
 Invoke-WebRequest $url -OutFile $temp -UseBasicParsing
 $sha = (Get-FileHash $temp -Algorithm SHA256).Hash
@@ -56,11 +56,11 @@ PackageVersion: $Version
 PackageLocale: en-US
 Publisher: G4SBO
 PublisherUrl: https://g4sbo.com
-PublisherSupportUrl: https://github.com/yo-gabriel-portfolio-here/PatchLight/issues
+PublisherSupportUrl: https://github.com/G4SBO/PatchLight/issues
 PackageName: PatchLight
-PackageUrl: https://github.com/yo-gabriel-portfolio-here/PatchLight
+PackageUrl: https://github.com/G4SBO/PatchLight
 License: MIT
-LicenseUrl: https://github.com/yo-gabriel-portfolio-here/PatchLight/blob/main/LICENSE
+LicenseUrl: https://github.com/G4SBO/PatchLight/blob/main/LICENSE
 ShortDescription: Know if a Windows update is safe before you install it.
 Description: PatchLight checks every Windows update waiting on your PC against Microsoft's known issues and tech-news reports, shows a green, yellow or red light, pauses only the bad ones and resumes them once Microsoft fixes them.
 Tags:
@@ -68,7 +68,7 @@ Tags:
 - windows-11
 - known-issues
 - updates
-ReleaseNotesUrl: https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/tag/v$Version
+ReleaseNotesUrl: https://github.com/G4SBO/PatchLight/releases/tag/v$Version
 ManifestType: defaultLocale
 ManifestVersion: $schema
 "@ | Write-Manifest "$id.locale.en-US.yaml"

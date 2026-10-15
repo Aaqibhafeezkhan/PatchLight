@@ -2,7 +2,7 @@
 
 **Know if a Windows update is safe before you install it.**
 
-**[⬇ Download PatchLight for Windows 11](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** (installer, 46 MB) · [All downloads](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest) · [Code signing policy](#code-signing-policy)
+**[⬇ Download PatchLight for Windows 11](https://github.com/G4SBO/PatchLight/releases/latest/download/PatchLight-Setup.exe)** (installer, 46 MB) · [All downloads](https://github.com/G4SBO/PatchLight/releases/latest) · [Is it safe?](#is-it-safe)
 
 > Use the download link above. The green **Code → Download ZIP** button gives you the source code, not the app.
 
@@ -47,15 +47,30 @@ Microsoft's public [Windows release health](https://learn.microsoft.com/en-us/wi
 
 ## Get it
 
-1. Download **[PatchLight-Setup.exe](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest/download/PatchLight-Setup.exe)** and open it.
+1. Download **[PatchLight-Setup.exe](https://github.com/G4SBO/PatchLight/releases/latest/download/PatchLight-Setup.exe)** and open it.
 2. Windows asks for permission, then PatchLight installs and opens. After that you can find it later in the Start menu.
 3. The installer asks whether PatchLight should start with Windows (it then waits in the tray). You can change that any time in **Settings**.
 
 The files aren't code-signed yet, so Windows SmartScreen may warn you the first time. Choose **More info**, then **Run anyway**.
+([Why?](#is-it-safe))
 
-Prefer no installer? `PatchLight-win-x64.zip` on the [downloads page](https://github.com/yo-gabriel-portfolio-here/PatchLight/releases/latest)
+Prefer no installer? `PatchLight-win-x64.zip` on the [downloads page](https://github.com/G4SBO/PatchLight/releases/latest)
 is the same app. Unzip it to `C:\Program Files\PatchLight`: the automatic check only runs PatchLight from a folder that only
 administrators can change, so other programs can't swap it for something else.
+
+## Is it safe?
+
+PatchLight needs administrator rights to pause updates, so it's fair to ask. Here is what you can check:
+
+- **Why Windows warns you:** the downloads aren't code-signed yet. A signing certificate costs money, and SmartScreen
+  also warns about any new app that few people have downloaded. It doesn't mean something bad was found.
+- **Read the code:** everything PatchLight does is in this repository, under the MIT license.
+- **Check the file:** the [downloads page](https://github.com/G4SBO/PatchLight/releases/latest) shows the SHA-256 of
+  every file, and the release notes link a [VirusTotal](https://www.virustotal.com/) scan.
+- **Build it yourself:** see [Build](#build). No Visual Studio needed.
+- **Know what it touches:** [What PatchLight changes on your PC](#what-patchlight-changes-on-your-pc) lists everything,
+  and uninstalling removes all of it and resumes every update it paused.
+- **No data leaves your PC:** see [Privacy](#privacy).
 
 ## Command line
 
@@ -112,10 +127,10 @@ All of these are removed when you uninstall:
 
 ## Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+The downloads aren't code-signed yet. Free code signing from [SignPath Foundation](https://signpath.org/) is planned.
 
 Every download is built by [GitHub Actions](.github/workflows/release.yml) from the code in this repository, and each
-release is approved by hand before it is signed.
+release is approved by hand before it is published.
 
 Team roles:
 - Committers and reviewers: [G4SBO](https://github.com/G4SBO)

@@ -30,7 +30,7 @@ public static class DemoData
         public Task<IReadOnlyList<NewsArticle>> GetAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<NewsArticle>>(
         [
             new("Example News", "Windows Defender update KB2267602 reportedly slows down some games",
-                "https://github.com/yo-gabriel-portfolio-here/PatchLight#demo", DateTimeOffset.Now.AddDays(-1), ["KB2267602"], true),
+                "https://github.com/G4SBO/PatchLight#demo", DateTimeOffset.Now.AddDays(-1), ["KB2267602"], true),
         ]);
     }
 

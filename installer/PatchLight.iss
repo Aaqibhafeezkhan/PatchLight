@@ -15,7 +15,7 @@ VersionInfoVersion={#AppVersion}
 VersionInfoDescription=PatchLight installer
 AppPublisher=G4SBO
 AppPublisherURL=https://g4sbo.com
-AppSupportURL=https://github.com/yo-gabriel-portfolio-here/PatchLight/issues
+AppSupportURL=https://github.com/G4SBO/PatchLight/issues
 ; Program Files: only administrators can change it, which the daily check needs.
 DefaultDirName={autopf}\PatchLight
 DisableDirPage=yes
