@@ -63,3 +63,7 @@ Filename: "{app}\PatchLight.exe"; Description: "Open PatchLight"; Flags: nowait 
 [UninstallRun]
 ; Resumes everything PatchLight paused, removes the automatic check, its "wait" policy, "Start with Windows" and its data.
 Filename: "{app}\PatchLight.exe"; Parameters: "--uninstall-cleanup"; Flags: runhidden waituntilterminated; RunOnceId: "PatchLightCleanup"
+
+[UninstallDelete]
+; The person's own settings, saved news reports and error log (the cleanup above runs elevated and doesn't reach them).
+Type: filesandordirs; Name: "{localappdata}\PatchLight"
