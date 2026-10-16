@@ -6,6 +6,8 @@
 
 > Use the download link above. The green **Code → Download ZIP** button gives you the source code, not the app.
 
+[![PatchLight | AlternativeTo](https://alternativeto.net/static/badges/badge-wide-dark.svg)](https://alternativeto.net/software/patchlight/about/?utm_source=badge&utm_medium=referral)
+
 Windows updates break PCs more often than they should: black screens, Remote Desktop
 failures, broken audio. PatchLight checks every update waiting on your PC against
 Microsoft's own list of known problems and gives it a light:
