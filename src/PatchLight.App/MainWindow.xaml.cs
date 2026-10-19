@@ -26,6 +26,10 @@ public sealed partial class MainWindow : Window
 
     public bool AllowClose { get; set; }
 
+    // Set by the app when it can update itself (not in demo mode).
+    public Func<Task<AppUpdateCheck>>? CheckForAppUpdate { get; set; }
+    public Func<AppRelease, Task<string?>>? InstallAppUpdate { get; set; }
+
     public MainWindow(AppController controller)
     {
         this.controller = controller;
@@ -76,6 +80,36 @@ public sealed partial class MainWindow : Window
     }
 
     private async void OnCheckClick(object sender, RoutedEventArgs e) => await controller.CheckAsync();
+
+    // canInstall: false for copies from the zip, which get a link to the download page instead.
+    public void ShowAppUpdate(AppRelease release, bool canInstall)
+    {
+        var version = release.Version.ToString(3);
+        var button = new Button { Content = canInstall ? "Update now" : "Download", Style = Style("AccentButtonStyle") };
+        button.Click += async (_, _) =>
+        {
+            if (!canInstall || InstallAppUpdate is null)
+            {
+                await global::Windows.System.Launcher.LaunchUriAsync(new Uri(release.PageUrl));
+                return;
+            }
+            button.IsEnabled = false;
+            button.Content = "Downloading...";
+            var error = await InstallAppUpdate(release);
+            if (error is null) return; // PatchLight is closing so the installer can run.
+            button.Content = "Update now";
+            button.IsEnabled = true;
+            Show(InfoBarSeverity.Warning, error);
+        };
+
+        UpdateBar.Title = $"PatchLight {version} is available";
+        UpdateBar.Message = canInstall
+            ? "Windows asks for permission, then PatchLight closes, updates and opens again. Your settings stay."
+            : "This copy came from the zip, so download the new version from GitHub.";
+        UpdateBar.ActionButton = button;
+        UpdateBar.Content = new HyperlinkButton { Content = "What's new", NavigateUri = new Uri(release.PageUrl), Padding = new Thickness(0, 0, 0, 8) };
+        UpdateBar.IsOpen = true;
+    }
 
     private void OnPageChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
@@ -421,6 +455,19 @@ public sealed partial class MainWindow : Window
         });
         about.Children.Add(new HyperlinkButton { Content = "Made by G4SBO", NavigateUri = new Uri(PatchLightHost.AuthorUrl), Padding = new Thickness(0) });
         about.Children.Add(new HyperlinkButton { Content = "Project page on GitHub", NavigateUri = new Uri(PatchLightHost.ProjectUrl), Padding = new Thickness(0) });
+        if (CheckForAppUpdate is { } checkForUpdate)
+        {
+            var check = new Button { Content = "Check for updates", Margin = new Thickness(0, 8, 0, 0) };
+            check.Click += async (_, _) =>
+            {
+                check.IsEnabled = false;
+                var result = await checkForUpdate();
+                check.IsEnabled = true;
+                if (!result.Reached) Show(InfoBarSeverity.Warning, "Couldn't reach GitHub to check. Try again later.");
+                else if (result.Newer is null) Show(InfoBarSeverity.Success, $"You have the latest version ({AppVersion()}).");
+            };
+            about.Children.Add(check);
+        }
         PageContent.Children.Add(Card(about));
 
         var state = await controller.GetDailyCheckAsync();

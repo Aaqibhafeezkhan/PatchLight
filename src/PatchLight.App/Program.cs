@@ -37,7 +37,7 @@ public static class Program
         {
             SynchronizationContext.SetSynchronizationContext(
                 new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread()));
-            _ = new App(new AppOptions(StartHidden: args.Contains("--tray"), Demo: demo, ShowSignal: showSignal));
+            _ = new App(new AppOptions(StartHidden: args.Contains("--tray"), Demo: demo, ShowSignal: showSignal, Instance: instance));
         });
         return 0;
     }
@@ -158,4 +158,5 @@ public static class Program
     }
 }
 
-public sealed record AppOptions(bool StartHidden, bool Demo, EventWaitHandle ShowSignal);
+// Instance: held while PatchLight runs; let go early when an update starts, so the installer doesn't wait for it.
+public sealed record AppOptions(bool StartHidden, bool Demo, EventWaitHandle ShowSignal, Mutex Instance);

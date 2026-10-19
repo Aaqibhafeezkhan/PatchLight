@@ -23,9 +23,13 @@ public static class PatchLightHost
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight", "news.json"),
         TimeProvider.System, RssNewsSource.DefaultFeeds);
 
-    private static HttpClient NewHttpClient()
+    // The installer is about 50 MB, so downloads get much longer than a page read.
+    public static AppUpdater CreateAppUpdater(Version current) => new(NewHttpClient(TimeSpan.FromMinutes(15)), current,
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatchLight", "updates"));
+
+    private static HttpClient NewHttpClient(TimeSpan? timeout = null)
     {
-        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        var http = new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(20) };
         http.DefaultRequestHeaders.UserAgent.ParseAdd($"PatchLight/0.5 (+{ProjectUrl})");
         return http;
     }

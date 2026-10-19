@@ -60,6 +60,12 @@ Prefer no installer? `PatchLight-win-x64.zip` on the [downloads page](https://gi
 is the same app. Unzip it to `C:\Program Files\PatchLight`: the automatic check only runs PatchLight from a folder that only
 administrators can change, so other programs can't swap it for something else.
 
+**Updating:** from 0.5.1 on, PatchLight checks GitHub once a day and tells you when a new version is out. Click
+**Update now**: it downloads the installer, checks it against the SHA-256 GitHub lists for it, and runs it after Windows
+asks for permission. Nothing installs without your click. On 0.5.0 or older, just run the new
+[PatchLight-Setup.exe](https://github.com/G4SBO/PatchLight/releases/latest/download/PatchLight-Setup.exe) over the old one;
+your settings stay.
+
 ## Is it safe?
 
 PatchLight needs administrator rights to pause updates, so it's fair to ask. Here is what you can check:

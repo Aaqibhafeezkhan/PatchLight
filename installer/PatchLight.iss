@@ -59,6 +59,9 @@ Name: "{autodesktop}\PatchLight"; Filename: "{app}\PatchLight.exe"; Tasks: deskt
 Filename: "{app}\PatchLight.exe"; Parameters: "--setup-daily-check"; Flags: runhidden waituntilterminated
 ; Opened as the person, not as administrator, so "Start with Windows" lands in their own account.
 Filename: "{app}\PatchLight.exe"; Description: "Open PatchLight"; Flags: nowait postinstall skipifsilent runasoriginaluser
+; After an update started from the app (/RELAUNCH). The app starts this installer as administrator, so
+; runasoriginaluser would be administrator too; Explorer opens it as the person instead.
+Filename: "{win}\explorer.exe"; Parameters: """{app}\PatchLight.exe"""; Flags: nowait; Check: RelaunchAfterUpdate
 
 [UninstallRun]
 ; Resumes everything PatchLight paused, removes the automatic check, its "wait" policy, "Start with Windows" and its data.
@@ -67,3 +70,14 @@ Filename: "{app}\PatchLight.exe"; Parameters: "--uninstall-cleanup"; Flags: runh
 [UninstallDelete]
 ; The person's own settings, saved news reports and error log (the cleanup above runs elevated and doesn't reach them).
 Type: filesandordirs; Name: "{localappdata}\PatchLight"
+
+[Code]
+function RelaunchAfterUpdate: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/RELAUNCH') = 0 then
+      Result := True;
+end;

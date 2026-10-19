@@ -61,6 +61,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <SelectorBar x:Name="Pages" SelectionChanged="OnPageChanged">
@@ -68,8 +69,10 @@
                     <SelectorBarItem x:Name="HistoryPage" Text="History" />
                     <SelectorBarItem x:Name="SettingsPage" Text="Settings" />
                 </SelectorBar>
-                <InfoBar x:Name="Message" Grid.Row="1" IsOpen="False" Margin="0,8,0,0" />
-                <ScrollViewer Grid.Row="2" Margin="0,8,0,0">
+                <!-- A newer PatchLight is out; stays open across pages until it's installed or closed. -->
+                <InfoBar x:Name="UpdateBar" Grid.Row="1" IsOpen="False" Margin="0,8,0,0" Severity="Informational" />
+                <InfoBar x:Name="Message" Grid.Row="2" IsOpen="False" Margin="0,8,0,0" />
+                <ScrollViewer Grid.Row="3" Margin="0,8,0,0">
                     <StackPanel x:Name="PageContent" Spacing="10" Padding="0,4,12,24" />
                 </ScrollViewer>
             </Grid>

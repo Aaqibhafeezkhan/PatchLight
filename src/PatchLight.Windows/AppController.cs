@@ -176,6 +176,15 @@ public sealed class AppController(Func<Backend> createBackend, AppStateStore sta
 
     public void SetPauseDays(int days) => SaveState(State with { PauseDays = Math.Clamp(days, 1, HoldPolicy.MaxDays) });
 
+    // True the first time a new PatchLight version comes up, so the tray only mentions each version once.
+    public bool MarkAppUpdateNotified(Version version)
+    {
+        var text = version.ToString(3);
+        if (State.NotifiedAppVersion == text) return false;
+        SaveState(State with { NotifiedAppVersion = text });
+        return true;
+    }
+
     // Always checks again afterwards, even on failure: the action may have got halfway.
     private async Task<ActionResult> RunActionAsync(Func<Backend, Task<string?>> action, bool recheck = true)
     {

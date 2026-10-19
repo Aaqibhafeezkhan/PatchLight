@@ -13,12 +13,15 @@ public partial class App : Application
 {
     // Same pace as the automatic check, so what it did reaches the person within the hour.
     private static readonly TimeSpan CheckEvery = TimeSpan.FromHours(1);
+    private static readonly TimeSpan AppUpdateCheckEvery = TimeSpan.FromDays(1);
 
     private readonly AppOptions options;
     private readonly AppController controller;
     private MainWindow? window;
     private TaskbarIcon? tray;
     private DispatcherQueueTimer? timer;
+    private AppUpdater? updater;
+    private DispatcherQueueTimer? updateTimer;
 
     public App(AppOptions options)
     {
@@ -50,6 +53,75 @@ public partial class App : Application
         timer.Tick += async (_, _) => await controller.CheckAsync();
         timer.Start();
         _ = controller.CheckAsync();
+
+        if (!options.Demo) StartAppUpdateChecks();
+    }
+
+    // ---- PatchLight's own updates ----
+
+    private void StartAppUpdateChecks()
+    {
+        updater = PatchLightHost.CreateAppUpdater(typeof(App).Assembly.GetName().Version ?? new Version(0, 0, 0));
+        updater.CleanUp();
+        window!.CheckForAppUpdate = CheckForAppUpdateAsync;
+        window.InstallAppUpdate = InstallAppUpdateAsync;
+
+        updateTimer = window.DispatcherQueue.CreateTimer();
+        updateTimer.Interval = AppUpdateCheckEvery;
+        updateTimer.Tick += async (_, _) => await CheckForAppUpdateAsync();
+        updateTimer.Start();
+        _ = FirstAppUpdateCheckAsync();
+    }
+
+    // A little after starting, so it doesn't compete with the first update check.
+    private async Task FirstAppUpdateCheckAsync()
+    {
+        await Task.Delay(TimeSpan.FromMinutes(1));
+        await CheckForAppUpdateAsync();
+    }
+
+    private async Task<AppUpdateCheck> CheckForAppUpdateAsync()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var check = await updater!.CheckAsync(cts.Token);
+        if (check.Newer is { } release)
+        {
+            window!.ShowAppUpdate(release, CanInstallUpdates());
+            if (controller.MarkAppUpdateNotified(release.Version))
+                tray?.ShowNotification($"PatchLight {release.Version.ToString(3)} is available", "Open PatchLight to update.");
+        }
+        return check;
+    }
+
+    // Copies from the zip live wherever the person unzipped them; the installer would put a second copy in
+    // Program Files, so those get a link to the download page instead.
+    private static bool CanInstallUpdates() =>
+        Environment.ProcessPath is { } exe && InstallLocation.IsAdminOnly(exe);
+
+    // Returns a message when the update didn't start; otherwise PatchLight closes and the installer takes over.
+    private async Task<string?> InstallAppUpdateAsync(AppRelease release)
+    {
+        FileStream installer;
+        try
+        {
+            installer = await updater!.DownloadAsync(release, CancellationToken.None);
+        }
+        catch (PatchLightException ex)
+        {
+            return ex.Message;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException)
+        {
+            return "Couldn't download the update. Check your internet connection and try again.";
+        }
+
+        using (installer)
+        {
+            if (!AppUpdater.StartInstaller(installer)) return "Update cancelled. PatchLight wasn't changed.";
+        }
+        options.Instance.Dispose();
+        Quit();
+        return null;
     }
 
     private void CreateTray()
@@ -101,6 +173,7 @@ public partial class App : Application
     private void Quit()
     {
         timer?.Stop();
+        updateTimer?.Stop();
         tray?.Dispose();
         if (window is not null)
         {
