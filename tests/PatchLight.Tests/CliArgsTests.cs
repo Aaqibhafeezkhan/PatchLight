@@ -50,6 +50,7 @@ public class CliArgsTests
     [InlineData(new[] { "--no-news" }, "check")]
     [InlineData(new[] { "hold", "KB5127648" }, "hold")]
     [InlineData(new[] { "--help" }, "--help")]
+    [InlineData(new[] { "--version" }, "--version")]
     public void Command_defaults_to_check_when_only_options_are_given(string[] args, string command) =>
         Assert.Equal(command, CliArgs.Command(args));
 }

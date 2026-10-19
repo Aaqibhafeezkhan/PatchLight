@@ -11,7 +11,7 @@ public static class CliArgs
     {
         if (args.Length == 0) return "check";
         var first = args[0].ToLowerInvariant();
-        if (first is "--help" or "-h" or "/?") return first;
+        if (first is "--help" or "-h" or "/?" or "--version") return first;
         return first.StartsWith('-') ? "check" : first;
     }
 

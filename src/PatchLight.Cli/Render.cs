@@ -1,3 +1,4 @@
+using System.Reflection;
 using PatchLight.Core;
 using Spectre.Console;
 
@@ -136,8 +137,18 @@ public static class Render
         console.MarkupLine("  [bold]patchlight history[/]              Recent updates and which one likely broke something");
         console.MarkupLine("  [bold]patchlight uninstall KB5124008[/]  Remove an installed update and keep it paused until it's fixed");
         console.MarkupLine("  [bold]patchlight --no-news[/]            Check without reading tech news sites");
+        console.MarkupLine("  [bold]patchlight --version[/]            Show the installed PatchLight version");
         console.WriteLine();
         console.MarkupLine("[grey]Pausing, resuming and removing need a terminal opened as administrator.[/]");
+    }
+
+    public static void Version(IAnsiConsole console)
+    {
+        var assembly = typeof(CliApp).Assembly;
+        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString(3)
+            ?? "unknown";
+        console.MarkupLine($"PatchLight {Markup.Escape(version)}");
     }
 
     private static string Why(ReleaseReason reason) => reason switch

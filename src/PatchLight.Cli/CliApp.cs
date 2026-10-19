@@ -21,6 +21,12 @@ public static class CliApp
                 return 0;
             }
 
+            if (command == "--version")
+            {
+                Render.Version(console);
+                return 0;
+            }
+
             var windows = SystemInfo.Read();
             if (!windows.IsWindows11 || windows.DisplayVersion is null)
                 throw new PatchLightException("PatchLight works on Windows 11 only for now.");

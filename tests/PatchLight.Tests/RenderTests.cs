@@ -27,6 +27,13 @@ public class RenderTests
     }
 
     [Fact]
+    public void Version_shows_the_product_and_build_version()
+    {
+        var text = Output(Render.Version);
+        Assert.Matches(@"^PatchLight \d+\.\d+\.\d+", text);
+    }
+
+    [Fact]
     public void Red_update_shows_the_problem_and_how_to_pause_it()
     {
         var text = Output(c => Render.Check(c, Result(Light.Red), isAdmin: false));
