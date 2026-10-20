@@ -8,6 +8,7 @@ SIZES = [16, 20, 24, 32, 40, 48, 64, 256]
 SCALE = 8  # draw big, then shrink, for smooth edges
 
 HOUSING = (32, 42, 57, 255)  # same housing and lamps as app.ico
+OUTLINE = (84, 101, 128, 255)  # lighter rim so the light stands out on a dark taskbar
 LAMPS = [(239, 68, 68), (250, 204, 21), (34, 197, 94)]  # red, yellow, green (top to bottom)
 OFF_MIX = 0.22  # how much of its own color an unlit lamp keeps
 
@@ -27,7 +28,9 @@ def draw(size, lit):
     k = s / 256
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([v * k for v in BOX], radius=CORNER * k, fill=HOUSING)
+    rim = max(1.0, size * 0.045) * SCALE  # about 1 px at 16 px, thicker on big sizes
+    d.rounded_rectangle([v * k for v in BOX], radius=CORNER * k, fill=HOUSING,
+                        outline=OUTLINE, width=round(rim))
 
     cx, r = 128 * k, LAMP_R * k
     for i, color in enumerate(LAMPS):
